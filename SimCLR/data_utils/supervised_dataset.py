@@ -8,17 +8,19 @@ class SupervisedLearningDataset:
         self.root_folder = root_folder
 
     @staticmethod
-    def get_supervised_pipeline_transform(name, size, mode='train'):
-        """Return a set of data augmentation transformations as described in the SimCLR paper."""
+    def get_supervised_pipeline_transform(name, mode='train'):
         if name == 'cifar10':
+            size = 32
             mean = (0.4914, 0.4822, 0.4465)
             std = (0.2023, 0.1994, 0.2010)
         elif name == 'stl10':
+            size = 96
             mean = (0.4914, 0.4822, 0.4465)
             std = (0.2471, 0.2435, 0.2616)
         normalize = transforms.Normalize(mean=mean, std=std)
         if mode == 'train':
-            data_transforms = transforms.Compose([transforms.RandomResizedCrop(size=size, scale=(0.2,1)),
+            data_transforms = transforms.Compose([
+                                                transforms.RandomCrop(size=size, padding=4),
                                                 transforms.RandomHorizontalFlip(),
                                                 transforms.ToTensor(),
                                                 normalize,
@@ -31,24 +33,17 @@ class SupervisedLearningDataset:
         return data_transforms
 
     def get_dataset(self, name):
-        train_datasets = {'cifar10': lambda: datasets.CIFAR10(self.root_folder, train=True,
-                                                              transform=self.get_simclr_pipeline_transform('cifar10', 32),
-                                                              download=True),
-
-                          'stl10': lambda: datasets.STL10(self.root_folder, split='train',
-                                                          transform=self.get_simclr_pipeline_transform('stl10', '96'),
-                                                          download=True)}
-
-        val_datasets = {'cifar10': lambda: datasets.CIFAR10(self.root_folder, train=False,
-                                                        transform=self.get_simclr_pipeline_transform('cifar10', 32 ,'val'),
-                                                        download=True),
-
-                    'stl10': lambda: datasets.STL10(self.root_folder, split='test',
-                                                    transform=self.get_simclr_pipeline_transform('stl10', '96', 'val'),
-                                                    download=True)}
-        try:
-            train_dataset, val_dataset = train_datasets[name], val_datasets[name]
-        except KeyError:
-            raise InvalidDatasetSelection()
+        print(self.root_folder)
+        train_transform = self.get_supervised_pipeline_transform(name, 'train')
+        val_transform = self.get_supervised_pipeline_transform(name, 'val')
+        if name == 'cifar10':
+            train_dataset = datasets.CIFAR10(self.root_folder,transform=train_transform,
+                                                              download=True)
+            val_dataset = datasets.CIFAR10(self.root_folder,train=False, transform=val_transform)
+        elif name == 'stl10':
+            train_dataset = datasets.STL10(self.root_folder,transform=train_transform,split='train',
+                                                              download=True)
+            val_dataset = datasets.STL10(self.root_folder,split='test', transform=val_transform)
         else:
-            return train_dataset, val_dataset
+            raise ValueError(name)
+        return train_dataset, val_dataset

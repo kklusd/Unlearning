@@ -1,7 +1,7 @@
 from torchvision.transforms import transforms
-from data_aug.gaussian_blur import GaussianBlur
+from data_utils.gaussian_blur import GaussianBlur
 from torchvision import transforms, datasets
-from data_aug.view_generator import ContrastiveLearningViewGenerator
+from data_utils.view_generator import ContrastiveLearningViewGenerator
 from exceptions.exceptions import InvalidDatasetSelection
 
 

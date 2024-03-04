@@ -14,7 +14,7 @@ model_names = sorted(name for name in models.__dict__
                      and callable(models.__dict__[name]))
 
 parser = argparse.ArgumentParser(description='PyTorch SimCLR')
-parser = argparse.ArgumentParser('-framework', default='simclr', help='If training a supervised classifier, please type "supervised"')
+parser.add_argument('-framework', default='simclr', help='If training a supervised classifier, please type "supervised"')
 parser.add_argument('-data', metavar='DIR', default='./datasets',
                     help='path to dataset')
 parser.add_argument('-dataset-name', default='stl10',
@@ -39,7 +39,6 @@ parser.add_argument('--wd', '--weight-decay', default=1e-4, type=float,
                     metavar='W', help='weight decay (default: 1e-4)',
                     dest='weight_decay')
 parser.add_argument('--mo', type=float, default=0.9, help='momentum')
-parser.add_argument('--lr_decay_step', type=float, default=30, help='After how much steps to decay the learning rate')
 parser.add_argument('--seed', default=None, type=int,
                     help='seed for initializing training. ')
 parser.add_argument('--disable-cuda', action='store_true',
@@ -60,6 +59,7 @@ parser.add_argument('--gpu-index', default=0, type=int, help='Gpu index.')
 
 def main():
     args = parser.parse_args()
+    print(args)
     # check if gpu training is available
     if not args.disable_cuda and torch.cuda.is_available():
         args.device = torch.device('cuda')
@@ -91,10 +91,13 @@ def main():
             simclr.train(train_loader)
     elif args.framework == 'supervised':
         dataset = SupervisedLearningDataset(args.data)
-        train_loader, val_loader = dataset.get_dataset(args.dataset_name)
+        train_dataset, val_dataset = dataset.get_dataset(args.dataset_name)
+        print(train_dataset)
+        train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,num_workers=args.workers, pin_memory=True, sampler=None)
+        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=100, shuffle=False, num_workers=2, pin_memory=True)
         model = ResNetClassifier(base_model=args.arch, num_class=args.out_dim)
-        optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.wd)
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=args.lr_decay_step, gamma=0.1)
+        optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=args.mo, weight_decay=args.weight_decay)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
         with torch.cuda.device(args.gpu_index):
             classifier = SupClassifier(model=model, optimizer=optimizer, scheduler=scheduler, train_loader=train_loader, val_loader=val_loader, args=args)
             classifier.train()

@@ -1,6 +1,5 @@
 import os
 import shutil
-
 import torch
 import yaml
 
@@ -17,8 +16,25 @@ def save_config_file(model_checkpoints_folder, args):
         with open(os.path.join(model_checkpoints_folder, 'config.yml'), 'w') as outfile:
             yaml.dump(args, outfile, default_flow_style=False)
 
+class AverageMeter(object):
+    """Computes and stores the average and current value"""
+    def __init__(self):
+        self.reset()
 
-def accuracy(output, target, topk=(1,)):
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
+
+
+def accuracy(output, target, topk=(1,5)):
     """Computes the accuracy over the k top predictions for the specified values of k"""
     with torch.no_grad():
         maxk = max(topk)
