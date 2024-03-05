@@ -5,8 +5,8 @@ from exceptions.exceptions import InvalidBackboneError
 class ResNetClassifier(nn.Module):
     def __init__(self, base_model, num_class):
         super(ResNetClassifier, self).__init__()
-        self.resnet_dict = {"resnet18": models.resnet18(pretrained=False, num_classes=num_class),
-                            "resnet50": models.resnet50(pretrained=False, num_classes=num_class)}
+        self.resnet_dict = {"resnet18": models.resnet18(weights=None, num_classes=num_class),
+                            "resnet50": models.resnet50(weights=None, num_classes=num_class)}
         self.base_model = self._get_basemodel(base_model)
     
     def _get_basemodel(self, model_name):
