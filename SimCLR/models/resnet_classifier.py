@@ -20,3 +20,6 @@ class ResNetClassifier(nn.Module):
         
     def forward(self, x):
         return self.base_model(x)
+
+if __name__ == '__main__':
+    print(1)
