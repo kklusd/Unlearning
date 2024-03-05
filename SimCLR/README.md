@@ -28,7 +28,12 @@ Before running SimCLR, make sure you choose the correct running configurations. 
 $ python run.py -data ./datasets --dataset-name stl10 --log-every-n-steps 100 --epochs 100 
 
 ```
+##Train resnet classifier
+```python
 
+$ python run.py -framework supervised --lr 0.1 -j 3 -b 128 -out_dim 10 -wd 5e-4 --dataset-name cifar10 --log-every-n-steps 100 
+
+```
 If you want to run it on CPU (for debugging purposes) use the ```--disable-cuda``` option.
 
 For 16-bit precision GPU training, there **NO** need to to install [NVIDIA apex](https://github.com/NVIDIA/apex). Just use the ```--fp16_precision``` flag and this implementation will use [Pytorch built in AMP training](https://pytorch.org/docs/stable/notes/amp_examples.html).
