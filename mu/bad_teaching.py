@@ -84,7 +84,7 @@ def UnlearnLoss(class_logits, student_sim_features, sim_features, labels, compet
     overall_teacher_out = labels * u_teacher_out + (1-labels)*f_teacher_out
     student_class = F.log_softmax(class_logits / KL_temperature, dim=1)
     kl_loss = F.kl_div(student_class, overall_teacher_out)
-    return sim_loss + kl_loss
+    return sim_loss, kl_loss
 
 
 def unlearning_step(model, unlearning_teacher, compete_teacher, simclr, data_loader, optimizer, device, KL_temperature):
@@ -123,4 +123,4 @@ def bad_teaching(model_dic, unlearing_loader, epoch, device,  opt):
     loss = unlearning_step(model=student, unlearning_teacher=unlearning_teacher, 
                             compete_teacher=compete_teacher, simclr=simclr, data_loader=unlearing_loader,
                             optimizer=optimizer, device=device, KL_temperature=1)
-    print("Epoch {} Unlearning Loss {}".format(epoch+1, loss))
+    print("Epoch {} Unlearning Loss {}".format(epoch, loss))

@@ -110,7 +110,7 @@ def main():
         bad_teaching(model_dic=model_dic, unlearing_loader=unlearn_dl, epoch=epoch, device=device, opt=opt)
         print('After unlearning epoch {} student forget'.format(epoch))
         print(evaluate(student, forget_val_dl, device))
-        print('After unlearning epoch {} student retain')
+        print('After unlearning epoch {} student retain'.format(epoch))
         print(evaluate(student, retain_val_dl, device))
 
 if __name__ == '__main__':
