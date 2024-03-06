@@ -52,6 +52,7 @@ def main():
             unlearn_teacher.eval()
         else:
             raise ValueError(base_model)
+        #-------------------------------------
         compete_teacher = ResNetClassifier(num_class=num_class, base_model=base_model)
         checkpoint_te = torch.load(opt.teacher_path, map_location=device)
         compete_teacher.load_state_dict(checkpoint_te['state_dict'])
