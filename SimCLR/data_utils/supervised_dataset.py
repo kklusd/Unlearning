@@ -17,6 +17,8 @@ class SupervisedLearningDataset:
             size = 96
             mean = (0.4914, 0.4822, 0.4465)
             std = (0.2471, 0.2435, 0.2616)
+        else:
+            raise ValueError(name)
         normalize = transforms.Normalize(mean=mean, std=std)
         if mode == 'train':
             data_transforms = transforms.Compose([
