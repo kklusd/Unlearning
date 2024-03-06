@@ -20,10 +20,5 @@ class ResNetClassifier(nn.Module):
         
     def forward(self, x):
         return self.base_model(x)
-<<<<<<< HEAD
-    
-=======
-
->>>>>>> 0025380f1ea16c3ea721f1939a9e9097a12019d1
 if __name__ == '__main__':
     print(1)
