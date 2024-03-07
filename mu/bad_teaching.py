@@ -81,7 +81,8 @@ def set_dataset(data_name, root, mode='classwise', forget_classes=0, forget_num=
 def UnlearnLoss(class_logits, student_sim_features, sim_features, labels, compete_teacher_logits, unlearn_teacher_logits, KL_temperature,loss_weight):
     student_sim = F.normalize(student_sim_features, dim=1)
     sim = F.normalize(sim_features, dim=1)
-    sim_loss = torch.sum(-1 * labels * torch.sum(sim*student_sim, dim=-1))
+    similarity = torch.sum(sim*student_sim, dim=-1)
+    sim_loss = torch.mean(labels * similarity) + torch.mean((labels - 1) * similarity)
     labels = torch.unsqueeze(labels, dim=1)
     f_teacher_out = F.softmax(compete_teacher_logits / KL_temperature, dim=1)
     u_teacher_out = F.softmax(unlearn_teacher_logits / KL_temperature, dim=1)
