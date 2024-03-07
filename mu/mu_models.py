@@ -8,9 +8,9 @@ class BasicResnet(nn.Module):
     def __init__(self, base_model, out_dim, pretrained):
         super(BasicResnet, self).__init__()
         if base_model == 'resnet18':
-            self.base = models.resnet18(pretrained=pretrained, num_classes=out_dim)
+            self.base = models.resnet18(weights=None, num_classes=out_dim)
         elif base_model == 'resnet50':
-            self.base = models.resnet50(pretrained=pretrained, num_classes=out_dim)
+            self.base = models.resnet50(weights=None, num_classes=out_dim)
         else:
             raise ValueError(base_model)
         self.base.fc = nn.Sequential()
@@ -22,9 +22,9 @@ class LinearClassifier(nn.Module):
     def __init__(self, base_model, pretrained, num_class):
         super(LinearClassifier, self).__init__()
         if base_model == 'resnet18':
-            base = models.resnet18(pretrained=pretrained, num_classes=num_class)
+            base = models.resnet18(weights=None, num_classes=num_class)
         elif base_model == 'resnet50':
-            base = models.resnet50(pretrained=pretrained, num_classes=num_class)
+            base = models.resnet50(weights=None, num_classes=num_class)
         else:
             raise ValueError(base_model)
         dim_mlp = base.fc.in_features
@@ -38,9 +38,9 @@ class ProjectionHead(nn.Module):
         super(ProjectionHead,self).__init__()
 
         if base_model == 'resnet18':
-            base = models.resnet18(pretrained=pretrained, num_classes=out_dim)
+            base = models.resnet18(weights=None, num_classes=out_dim)
         elif base_model == 'resnet50':
-            base = models.resnet50(pretrained=pretrained, num_classes=out_dim)
+            base = models.resnet50(weights=None, num_classes=out_dim)
         else:
             raise ValueError(base_model)
         dim_mlp = base.fc.in_features

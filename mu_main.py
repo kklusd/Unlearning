@@ -10,32 +10,13 @@ from mu.bad_teaching import *
 from mu.bad_teaching import set_dataset
 from mu.mu_utils import evaluate
 from mu.mu_metrics import SVC_MIA
+import time
+from tqdm import tqdm,trange
+import mu.arg_parser as parser
 
-def parse_option():
-    parser = argparse.ArgumentParser('argument for unlearning')
-    parser.add_argument('--base_model', type=str, default='resnet18', help='basic model for classification')
-    parser.add_argument('--teacher_path', type=str, default='./SimCLR/runs/original_model/checkpoint_0200.pth.tar',
-                        help='teacher model path')
-    parser.add_argument('--num_class', type=int, default=10, help='number of classes in dataset')
-    parser.add_argument('--sim_path', type=str, default='./SimCLR/runs/sim_model/checkpoint_0020.pth.tar',
-                        help='simCLR model path')
-    parser.add_argument('--out_dim', type=int, default=128, help='feature dim of simCLR')
-    parser.add_argument('--lr', type=float, default=0.001, help='unlearning rate')
-    parser.add_argument('--epoches', type=int, default=1, help='unlearning epoches')
-    parser.add_argument('--method', type=str, default='bad_teaching', help='unlearning method')
-    parser.add_argument('--mode', type=str, default='classwise', help='forget mode: classwise or random')
-    parser.add_argument('--forget_num', type=int, default=100, help='size of forget set')
-    parser.add_argument('--forget_class', type=int, default=0, help='forget class of classwise unlearning')
-    parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer for unlearning')
-    parser.add_argument('--batch_size', type=int, default=256, help='batch size for unlearing')
-    parser.add_argument('--num_worker', type=int, default=6, help='number of workers for dataloader')
-    parser.add_argument('--data_name', type=str, default='cifar10', help='dataset name')
-    parser.add_argument('-data_root', type=str, default='./SimCLR/datasets', help='root of dataset')
-    opt = parser.parse_args()
-    return opt
 
 def main():
-    opt = parse_option()
+    opt = parser.parse_option()
     method = opt.method
     num_class = opt.num_class
     out_dim = opt.out_dim
@@ -44,11 +25,11 @@ def main():
     epoches = opt.epoches
     if method == 'bad_teaching':
         if base_model == 'resnet18':
-            unlearn_teacher = models.resnet18(num_classes = num_class, pretrained=False)
+            unlearn_teacher = models.resnet18(num_classes = num_class,  weights = None)
             unlearn_teacher.to(device)
             unlearn_teacher.eval()
         elif base_model == 'resnet50':
-            unlearn_teacher = models.resnet18(num_classes = num_class, pretrained=False)
+            unlearn_teacher = models.resnet18(num_classes = num_class, weights = None)
             unlearn_teacher.to(device)
             unlearn_teacher.eval()
         else:
@@ -100,7 +81,7 @@ def main():
         print('Before unlearning student retain')
         print(evaluate(student, retain_val_dl, device))
 
-#----------------------------开始很慢--------------------------------
+#----------------------------Training Process--------------------------------
         for k, v in student.named_parameters():
             if 'projection_head' in k.split('.'):
                 v.requires_grad_(False)
@@ -109,8 +90,8 @@ def main():
                      'simclr': simCLR,
                      'compete_teacher': compete_teacher}
 
-        for i in range(epoches):
-            print('Epoch:',i)
+
+        for i in trange(epoches):
             epoch = i + 1
             bad_teaching(model_dic=model_dic, unlearing_loader=unlearn_dl, epoch=epoch, device=device, opt=opt)
         print('After unlearning epoch {} student forget'.format(epoch))
@@ -121,9 +102,12 @@ def main():
 
         #------------------other metrics-------------------
         """forget efficacy MIA:
-             in distribution: retain
-             out of distribution: test
-             target: (, forget)"""
+            in distribution: retain
+            out of distribution: test
+            target: (, forget)
+            train data:label1 ;val data:label0
+            wish forget val label goes to 0 :即被认为没有参与训练
+            MIA函数进行了1-mean，结果越靠近1越好"""
         test_len = 200
 
         shadow_train = torch.utils.data.Subset(retain_train, list(range(test_len)))

@@ -74,7 +74,7 @@ def set_dataset(data_name, root, mode='classwise', forget_classes=0, forget_num=
     else:
         raise ValueError(mode)
 
-def UnlearnLoss(class_logits, student_sim_features, sim_features, labels, compete_teacher_logits, unlearn_teacher_logits, KL_temperature):
+def UnlearnLoss(class_logits, student_sim_features, sim_features, labels, compete_teacher_logits, unlearn_teacher_logits, KL_temperature,loss_weight):
     student_sim = F.normalize(student_sim_features, dim=1)
     sim = F.normalize(sim_features, dim=1)
     sim_loss = torch.sum(-1 * labels * torch.sum(sim*student_sim, dim=-1))
@@ -83,12 +83,12 @@ def UnlearnLoss(class_logits, student_sim_features, sim_features, labels, compet
     u_teacher_out = F.softmax(unlearn_teacher_logits / KL_temperature, dim=1)
     overall_teacher_out = labels * u_teacher_out + (1-labels)*f_teacher_out
     student_class = F.log_softmax(class_logits / KL_temperature, dim=1)
-    kl_loss = F.kl_div(student_class, overall_teacher_out)
-    final_loss = 0.5*sim_loss +1*kl_loss
+    kl_loss = F.kl_div(student_class, overall_teacher_out,reduction = 'batchmean')
+    final_loss = loss_weight*sim_loss +1*kl_loss
     return final_loss
 
 
-def unlearning_step(model, unlearning_teacher, compete_teacher, simclr, data_loader, optimizer, device, KL_temperature):
+def unlearning_step(model, unlearning_teacher, compete_teacher, simclr, data_loader, optimizer, device, KL_temperature, loss_weight):
     losses = []
     for batch in data_loader:
         x, y = batch
@@ -101,7 +101,7 @@ def unlearning_step(model, unlearning_teacher, compete_teacher, simclr, data_loa
         optimizer.zero_grad()
         loss = UnlearnLoss(class_logits, student_sim_feature, sim_features, labels=y, 
                            compete_teacher_logits=compete_teacher_logits, 
-                           unlearn_teacher_logits=unlearn_teacher_logits, KL_temperature=KL_temperature)
+                           unlearn_teacher_logits=unlearn_teacher_logits, KL_temperature=KL_temperature,loss_weight = loss_weight)
         loss.backward()
         optimizer.step()
         losses.append(loss.detach().cpu().numpy())
@@ -123,5 +123,5 @@ def bad_teaching(model_dic, unlearing_loader, epoch, device,  opt):
         optimizer = torch.optim.SGD(student.parameters(), lr = opt.lr, momentum = 0.9, weight_decay = 5e-4)
     loss = unlearning_step(model=student, unlearning_teacher=unlearning_teacher, 
                             compete_teacher=compete_teacher, simclr=simclr, data_loader=unlearing_loader,
-                            optimizer=optimizer, device=device, KL_temperature=1)
+                            optimizer=optimizer, device=device, KL_temperature=1,loss_weight = opt.loss_weight)
     print("Epoch {} Unlearning Loss {}".format(epoch, loss))
