@@ -100,7 +100,7 @@ def main():
         print(evaluate(student, retain_val_dl, device))
 
 
-        #------------------other metrics-------------------
+        #------------------other metrics----------------------
         """forget efficacy MIA:
             in distribution: retain
             out of distribution: test
