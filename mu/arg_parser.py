@@ -10,9 +10,9 @@ def parse_option():
                         help='simCLR model path')
     parser.add_argument('--out_dim', type=int, default=128, help='feature dim of simCLR')
     parser.add_argument('--lr', type=float, default=0.001, help='unlearning rate')
-    parser.add_argument('--epoches', type=int, default=10, help='unlearning epoches')
+    parser.add_argument('--epoches', type=int, default=1, help='unlearning epoches')
     parser.add_argument('--method', type=str, default='bad_teaching', help='unlearning method')
-    parser.add_argument('--mode', type=str, default='classwise', help='forget mode: classwise or random')
+    parser.add_argument('--mode', type=str, default='random', help='forget mode: classwise or random')
     parser.add_argument('--forget_num', type=int, default=100, help='size of forget set')
     parser.add_argument('--forget_class', type=int, default=0, help='forget class of classwise unlearning')
     parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer for unlearning')
@@ -20,7 +20,7 @@ def parse_option():
     parser.add_argument('--num_worker', type=int, default=6, help='number of workers for dataloader')
     parser.add_argument('--data_name', type=str, default='cifar10', help='dataset name')
     parser.add_argument('-data_root', type=str, default='./SimCLR/datasets', help='root of dataset')
-    parser.add_argument('--loss_weight', type=float, default = 0, help='control the clr loss weight')
+    parser.add_argument('--loss_weight', type=float, default = 0.5, help='control the clr loss weight')
 
     opt = parser.parse_args()
     return opt

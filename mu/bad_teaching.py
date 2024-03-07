@@ -34,7 +34,7 @@ def set_dataset(data_name, root, mode='classwise', forget_classes=0, forget_num=
                                         normalize,
                                                 ])
         train_ds = datasets.STL10(root=root, split='train', transform=transform, download=True)
-        val_ds = datasets.CIFAR10(root=root, split='test', transform=transform)
+        val_ds = datasets.STL10(root=root, split='test', transform=transform)
     else:
         raise ValueError(data_name)
     
@@ -64,12 +64,16 @@ def set_dataset(data_name, root, mode='classwise', forget_classes=0, forget_num=
         
         for index in forget_indexes:
             random_forget['train'].append(train_ds[index])
-        
+
         for index in retain_indexes:
             random_retain['train'].append(train_ds[index])
 
-        for img, label in val_ds:
-            random_retain['val'].append((img, label))
+        for index in forget_indexes:
+            random_forget['val'].append(train_ds[index])
+
+        for index in retain_indexes:
+            random_retain['val'].append(train_ds[index])
+
         return random_forget, random_retain
     else:
         raise ValueError(mode)
