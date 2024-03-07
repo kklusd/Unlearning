@@ -35,7 +35,6 @@ def parse_option():
     return opt
 
 def main():
-    print(1)
     opt = parse_option()
     method = opt.method
     num_class = opt.num_class
@@ -112,7 +111,7 @@ def main():
         for i in range(epoches):
             print('Epoch:',i)
             epoch = i + 1
-        bad_teaching(model_dic=model_dic, unlearing_loader=unlearn_dl, epoch=epoch, device=device, opt=opt)
+            bad_teaching(model_dic=model_dic, unlearing_loader=unlearn_dl, epoch=epoch, device=device, opt=opt)
         print('After unlearning epoch {} student forget'.format(epoch))
         print(evaluate(student, forget_val_dl, device))
         print('After unlearning epoch {} student retain'.format(epoch))
