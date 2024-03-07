@@ -101,7 +101,7 @@ def main():
         print('Before unlearning student retain')
         print(evaluate(student, retain_val_dl, device))
 
-#--------------------------------------------
+#----------------------------开始很慢--------------------------------
         for k, v in student.named_parameters():
             if 'projection_head' in k.split('.'):
                 v.requires_grad_(False)
@@ -109,6 +109,7 @@ def main():
                      'unlearning_teacher': unlearn_teacher,
                      'simclr': simCLR,
                      'compete_teacher': compete_teacher}
+
         for i in range(epoches):
             print('Epoch:',i)
             epoch = i + 1
@@ -124,17 +125,26 @@ def main():
              in distribution: retain
              out of distribution: test
              target: (, forget)"""
-        test_len = len(retain_val_dl)
+        test_len = 200
 
         shadow_train = torch.utils.data.Subset(retain_train, list(range(test_len)))
         shadow_train_loader = torch.utils.data.DataLoader(
             shadow_train, batch_size=opt.batch_size, shuffle=False
         )
+        shadow_test = torch.utils.data.Subset(retain_val, list(range(test_len)))
+        shadow_test_loader = torch.utils.data.DataLoader(
+            shadow_test, batch_size=opt.batch_size, shuffle=False
+        )
+        target_test = torch.utils.data.Subset(forget_val, list(range(test_len)))
+        target_test_loader = torch.utils.data.DataLoader(
+            target_test, batch_size=opt.batch_size, shuffle=False
+        )
+
         SVC_MIA_forget_efficacy = SVC_MIA(
             shadow_train=shadow_train_loader,
-            shadow_test=retain_val_dl,
+            shadow_test=shadow_test_loader,
             target_train=None,
-            target_test=forget_val_dl,
+            target_test=target_test_loader,
             model=student,
         )
         print(SVC_MIA_forget_efficacy)

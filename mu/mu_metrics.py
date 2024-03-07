@@ -161,5 +161,4 @@ def SVC_MIA(shadow_train, target_train, target_test, shadow_test, model):
         "m_entropy": acc_m_entr,
         "prob": acc_prob,
     }
-    print(m)
     return m
