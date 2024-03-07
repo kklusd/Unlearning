@@ -11,7 +11,7 @@ from mu.bad_teaching import set_dataset
 from mu.mu_utils import evaluate
 from mu.mu_metrics import SVC_MIA
 import time
-from tqdm import trange
+from tqdm import trange,tqdm
 import mu.arg_parser as parser
 
 
