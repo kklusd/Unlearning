@@ -40,7 +40,7 @@ class ResNetKD(nn.Module):
                                                  ('output', nn.Softmax(dim=1))
                                                  ]))
         #
-        checkpoint = torch.load('../networkparams/checkpoint_0020.pth.tar')  # 加载模型
+        checkpoint = torch.load('../runs/checkpoint_0020.pth.tar')  # 加载模型
         self.model = ResNetSimCLR('resnet18', 128)
         self.model.load_state_dict(checkpoint['state_dict'])
 
