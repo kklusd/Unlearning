@@ -7,7 +7,9 @@ import torch
 import copy
 from torch.utils.data import DataLoader
 from mu.bad_teaching import *
+from mu.bad_teaching import set_dataset
 from mu.mu_utils import evaluate
+from mu.mu_metrics import SVC_MIA
 
 def parse_option():
     parser = argparse.ArgumentParser('argument for unlearning')
@@ -99,6 +101,7 @@ def main():
         print('Before unlearning student retain')
         print(evaluate(student, retain_val_dl, device))
 
+#--------------------------------------------
         for k, v in student.named_parameters():
             if 'projection_head' in k.split('.'):
                 v.requires_grad_(False)
@@ -107,12 +110,34 @@ def main():
                      'simclr': simCLR,
                      'compete_teacher': compete_teacher}
         for i in range(epoches):
+            print('Epoch:',i)
             epoch = i + 1
         bad_teaching(model_dic=model_dic, unlearing_loader=unlearn_dl, epoch=epoch, device=device, opt=opt)
         print('After unlearning epoch {} student forget'.format(epoch))
         print(evaluate(student, forget_val_dl, device))
         print('After unlearning epoch {} student retain'.format(epoch))
         print(evaluate(student, retain_val_dl, device))
+
+
+        #------------------other metrics-------------------
+        """forget efficacy MIA:
+             in distribution: retain
+             out of distribution: test
+             target: (, forget)"""
+        test_len = len(retain_val_dl)
+
+        shadow_train = torch.utils.data.Subset(retain_train, list(range(test_len)))
+        shadow_train_loader = torch.utils.data.DataLoader(
+            shadow_train, batch_size=opt.batch_size, shuffle=False
+        )
+        SVC_MIA_forget_efficacy = SVC_MIA(
+            shadow_train=shadow_train_loader,
+            shadow_test=retain_val_dl,
+            target_train=None,
+            target_test=forget_val_dl,
+            model=student,
+        )
+        print(SVC_MIA_forget_efficacy)
 
 if __name__ == '__main__':
     main()

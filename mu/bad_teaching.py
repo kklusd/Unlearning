@@ -84,7 +84,8 @@ def UnlearnLoss(class_logits, student_sim_features, sim_features, labels, compet
     overall_teacher_out = labels * u_teacher_out + (1-labels)*f_teacher_out
     student_class = F.log_softmax(class_logits / KL_temperature, dim=1)
     kl_loss = F.kl_div(student_class, overall_teacher_out)
-    return sim_loss, kl_loss
+    final_loss = 0.5*sim_loss +1*kl_loss
+    return final_loss
 
 
 def unlearning_step(model, unlearning_teacher, compete_teacher, simclr, data_loader, optimizer, device, KL_temperature):

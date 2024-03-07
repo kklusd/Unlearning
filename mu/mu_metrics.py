@@ -58,7 +58,7 @@ def collect_prob(data_loader, model):
                 )
                 data, target = get_x_y_from_data_dict(batch, device)
             with torch.no_grad():
-                output = model(data)
+                output = model(data)[0]
                 prob.append(F.softmax(output, dim=-1).data)
                 targets.append(target)
 
