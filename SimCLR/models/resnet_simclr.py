@@ -1,7 +1,8 @@
 import torch.nn as nn
 import torchvision.models as models
-
-from exceptions.exceptions import InvalidBackboneError
+import torch
+from ..exceptions.exceptions import InvalidBackboneError
+from collections import OrderedDict
 
 
 class ResNetSimCLR(nn.Module):
@@ -28,3 +29,23 @@ class ResNetSimCLR(nn.Module):
 
     def forward(self, x):
         return self.backbone(x)
+
+
+#for KD
+class ResNetKD(nn.Module):
+
+    def __init__(self):
+        super(ResNetKD, self).__init__()
+        self.classifier = nn.Sequential(OrderedDict([('fc2', nn.Linear(128, 10)),
+                                                 ('output', nn.Softmax(dim=1))
+                                                 ]))
+        #
+        checkpoint = torch.load('../networkparams/try20.tar')  # 加载模型
+        self.model = ResNetSimCLR('resnet18', 128)
+        self.model.load_state_dict(checkpoint['state_dict'])
+
+
+    def forward(self, x):
+        x = self.model(x)
+        x = self.classifier(x)
+        return x

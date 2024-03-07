@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torchvision.models as models
-from exceptions.exceptions import InvalidBackboneError
+from ..exceptions.exceptions import InvalidBackboneError
 
 class ResNetClassifier(nn.Module):
     def __init__(self, base_model, num_class):
