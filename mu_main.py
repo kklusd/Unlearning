@@ -23,7 +23,7 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     epoches = opt.epoches
 
-
+#---------------------------------你俩和一下-------------------------------------------
     if method == 'bad_teaching':
         if base_model == 'resnet18':
             unlearn_teacher = models.resnet18(num_classes = num_class,  weights = None)
