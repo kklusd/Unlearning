@@ -2,9 +2,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from sklearn.svm import SVC
-
-
-
+from torch.utils.data import DataLoader
 
 __all__ = [
 
@@ -162,3 +160,37 @@ def SVC_MIA(shadow_train, target_train, target_test, shadow_test, model):
         "prob": acc_prob,
     }
     return m
+
+
+"""forget efficacy MIA:
+    in distribution: retain
+    out of distribution: test
+    target: (, forget)
+    train data:label1 ;val data:label0
+    wish forget val label goes to 0 :即被认为没有参与训练
+    MIA函数进行了1-mean，结果越靠近1越好"""
+def MIA(retain_train,retain_val,forget_val,model):
+    test_len = 200
+    MIA_batch_size = test_len // 2
+    shadow_train = torch.utils.data.Subset(retain_train, list(range(test_len)))
+    shadow_train_loader = torch.utils.data.DataLoader(
+        shadow_train, batch_size=MIA_batch_size, shuffle=False
+    )
+    shadow_test = torch.utils.data.Subset(retain_val, list(range(test_len)))
+    shadow_test_loader = torch.utils.data.DataLoader(
+        shadow_test, batch_size=MIA_batch_size, shuffle=False
+    )
+    target_test = torch.utils.data.Subset(forget_val, list(range(100)))
+    target_test_loader = torch.utils.data.DataLoader(
+        target_test, batch_size=MIA_batch_size, shuffle=False
+    )
+    m = SVC_MIA(
+        shadow_train=shadow_train_loader,
+        shadow_test=shadow_test_loader,
+        target_train=None,
+        target_test=target_test_loader,
+        model=model,
+    )
+    return m
+
+

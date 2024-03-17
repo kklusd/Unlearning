@@ -8,8 +8,7 @@ import copy
 from torch.utils.data import DataLoader
 from mu.bad_teaching import *
 from mu.bad_teaching import set_dataset
-from mu.mu_utils import evaluate
-from mu.mu_metrics import SVC_MIA
+from mu.mu_utils import Evaluation
 import time
 from tqdm import trange,tqdm
 import mu.arg_parser as parser
@@ -25,8 +24,6 @@ def main():
     epoches = opt.epoches
 
 
-
-
     if method == 'bad_teaching':
         if base_model == 'resnet18':
             unlearn_teacher = models.resnet18(num_classes = num_class,  weights = None)
@@ -38,7 +35,6 @@ def main():
             unlearn_teacher.eval()
         else:
             raise ValueError(base_model)
-        #-------------------------------------
         compete_teacher = ResNetClassifier(num_class=num_class, base_model=base_model)
         checkpoint_te = torch.load(opt.teacher_path, map_location=device)
         compete_teacher.load_state_dict(checkpoint_te['state_dict'])
@@ -62,33 +58,6 @@ def main():
         student.load_state_dict(student_state)
         student.to(device)
 
-
-#------------------------------dataloader--------------------------------------------------
-        forget_set, retain_set = set_dataset(opt.data_name, opt.data_root, mode=opt.mode, 
-                                             forget_classes=opt.forget_class, forget_num=opt.forget_num)
-        
-        forget_train = forget_set['train']
-        forget_val = forget_set['val']
-        retain_train = retain_set['train']
-        retain_val = retain_set['val']
-        unlearn_dl = set_loader(retain_train, forget_train, opt)
-        if opt.mode == 'classwise':
-            forget_val_dl = DataLoader(forget_val, opt.batch_size, opt.num_worker, pin_memory=True)
-        else:
-            forget_val_dl = DataLoader(forget_train, opt.batch_size, opt.num_worker, pin_memory=True)
-        retain_val_dl = DataLoader(retain_val, opt.batch_size, opt.num_worker, pin_memory=True)
-#-----------------------------------把dataloader装一起--------------------------------------------
-        print('Before unlearning teacher forget')
-        print(evaluate(compete_teacher, forget_val_dl, device))
-        print('Before unlearning teacher retain')
-        print(evaluate(compete_teacher, retain_val_dl, device))
-        
-        print('Before unlearning student forget')
-        print(evaluate(student, forget_val_dl, device))
-        print('Before unlearning student retain')
-        print(evaluate(student, retain_val_dl, device))
-
-
         for k, v in student.named_parameters():
             if 'projection_head' in k.split('.'):
                 v.requires_grad_(False)
@@ -96,47 +65,24 @@ def main():
                      'unlearning_teacher': unlearn_teacher,
                      'simclr': simCLR,
                      'compete_teacher': compete_teacher}
-        # ----------------------------Training Process--------------------------------
 
-        for i in trange(epoches):
+
+        # ------------------------------dataloader--------------------------------------------------
+        forget_set, retain_set = set_dataset(opt.data_name, opt.data_root, mode=opt.mode,
+                                             forget_classes=opt.forget_class, forget_num=opt.forget_num)
+        forget_train = forget_set['train']
+        forget_val = forget_set['val']
+        retain_train = retain_set['train']
+        retain_val = retain_set['val']
+        unlearn_dl = set_loader(retain_train, forget_train, opt)
+
+        # ----------------------------Training Process--------------------------------
+        for i in range(epoches):
             epoch = i + 1
             bad_teaching(model_dic=model_dic, unlearing_loader=unlearn_dl, epoch=epoch, device=device, opt=opt)
-        print('After unlearning epoch {} student forget'.format(epoch))
-        print(evaluate(student, forget_val_dl, device))
-        print('After unlearning epoch {} student retain'.format(epoch))
-        print(evaluate(student, retain_val_dl, device))
 
-
-        #------------------other metrics----------------------
-        """forget efficacy MIA:
-            in distribution: retain
-            out of distribution: test
-            target: (, forget)
-            train data:label1 ;val data:label0
-            wish forget val label goes to 0 :即被认为没有参与训练
-            MIA函数进行了1-mean，结果越靠近1越好"""
-        test_len = 200
-        MIA_batch_size = test_len // 2
-        shadow_train = torch.utils.data.Subset(retain_train, list(range(test_len)))
-        shadow_train_loader = torch.utils.data.DataLoader(
-            shadow_train, batch_size=MIA_batch_size, shuffle=False
-        )
-        shadow_test = torch.utils.data.Subset(retain_val, list(range(test_len)))
-        shadow_test_loader = torch.utils.data.DataLoader(
-            shadow_test, batch_size=MIA_batch_size, shuffle=False
-        )
-        target_test = torch.utils.data.Subset(forget_val, list(range(100)))
-        target_test_loader = torch.utils.data.DataLoader(
-            target_test, batch_size=MIA_batch_size, shuffle=False
-        )
-        SVC_MIA_forget_efficacy = SVC_MIA(
-            shadow_train=shadow_train_loader,
-            shadow_test=shadow_test_loader,
-            target_train=None,
-            target_test=target_test_loader,
-            model=student,
-        )
-        print(SVC_MIA_forget_efficacy)
+        # ----------------------------Eva--------------------------------
+        Evaluation(student,retain_train, retain_val,forget_train, forget_val,opt,device,competemodel=compete_teacher)
 
 
 if __name__ == '__main__':

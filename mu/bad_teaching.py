@@ -4,6 +4,8 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader
 import numpy as np
 from .dataset import UnlearningData
+from tqdm import tqdm
+
 np.random.seed(123)
 
 def set_loader(retain_data, forget_data, opt):
@@ -83,7 +85,7 @@ def UnlearnLoss(class_logits, student_sim_features, sim_features, labels, compet
     sim = F.normalize(sim_features, dim=1)
     similarity = torch.sum(sim*student_sim, dim=-1)
     adj_weight = 1 / (1 + np.e ** (1 - 2 * torch.count_nonzero(labels).item() / labels.numel()))
-    print(adj_weight)
+    #print(adj_weight)
     sim_loss = (1 - adj_weight) * torch.mean(labels * similarity) + adj_weight * torch.mean((labels - 1) * similarity)
     labels = torch.unsqueeze(labels, dim=1)
     f_teacher_out = F.softmax(compete_teacher_logits / KL_temperature, dim=1)
@@ -97,7 +99,8 @@ def UnlearnLoss(class_logits, student_sim_features, sim_features, labels, compet
 
 def unlearning_step(model, unlearning_teacher, compete_teacher, simclr, data_loader, optimizer, device, KL_temperature, loss_weight):
     losses = []
-    for batch in data_loader:
+    for batch in tqdm(data_loader, desc='test',leave=False):
+    #for batch in data_loader:
         x, y = batch
         x, y = x.to(device), y.to(device)
         with torch.no_grad():
@@ -128,7 +131,8 @@ def bad_teaching(model_dic, unlearing_loader, epoch, device,  opt):
         optimizer = torch.optim.Adam(student.parameters(), lr = opt.lr)
     else:
         optimizer = torch.optim.SGD(student.parameters(), lr = opt.lr, momentum = 0.9, weight_decay = 5e-4)
-    loss = unlearning_step(model=student, unlearning_teacher=unlearning_teacher, 
+
+    loss = unlearning_step(model=student, unlearning_teacher=unlearning_teacher,
                             compete_teacher=compete_teacher, simclr=simclr, data_loader=unlearing_loader,
                             optimizer=optimizer, device=device, KL_temperature=1,loss_weight = opt.loss_weight)
     print("Epoch {} Unlearning Loss {}".format(epoch, loss))

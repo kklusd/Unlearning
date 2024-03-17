@@ -10,7 +10,7 @@ unlearn_teacher = ResNetClassifier(base_model, num_class=10)
 compete_teacher = ResNetClassifier(base_model, num_class=10)
 student = Student(base_model, pretrained=False, num_class=10, pro_dim=128)
 teacher_path = './SimCLR/runs/original_model/checkpoint_0200.pth.tar'
-simCLR_path = './SimCLR/runs/sim_model/checkpoint_0020.pth.tar'
+simCLR_path = './SimCLR/runs/sim_model/checkpoint_0120.pth.tar'
 checkpoint = torch.load(teacher_path, map_location=torch.device('cpu'))
 checkpoint_sim = torch.load(simCLR_path, map_location=torch.device('cpu'))
 student_state = copy.deepcopy(student.state_dict())
