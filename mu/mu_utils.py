@@ -30,13 +30,15 @@ def evaluate(model, val_loader, device):
 
     return validation_epoch_end(outputs)
 
-def Evaluation(model,retain_train,retain_val,forget_train,forget_val,opt,device,competemodel):
+def Evaluation(model_dic,retain_train,retain_val,forget_train,forget_val,opt,device):
     if opt.mode == 'classwise':
         forget_val_dl = DataLoader(forget_val, opt.batch_size, opt.num_worker, pin_memory=True)
     else:
         forget_val_dl = DataLoader(forget_train, opt.batch_size, opt.num_worker, pin_memory=True)
     retain_val_dl = DataLoader(retain_val, opt.batch_size, opt.num_worker, pin_memory=True)
 
+    model = model_dic['student']
+    competemodel = model_dic['compete_teacher']
     print('Before unlearning teacher forget')
     print(evaluate(competemodel, forget_val_dl, device))
     print('Before unlearning teacher retain')
@@ -48,10 +50,15 @@ def Evaluation(model,retain_train,retain_val,forget_train,forget_val,opt,device,
     print(evaluate(model, retain_val_dl, device))
 
     print('After unlearning epoch {} student forget'.format(opt.epoches))
+    print('After unlearning student forget')
     print(evaluate(model, forget_val_dl, device))
+    print('After unlearning student retain')
     print(evaluate(model, retain_val_dl, device))
     # ------------------other metrics----------------------
-    m1 = MIA(retain_train, retain_val, forget_val, model=model)
-    m2 = MIA(retain_train, retain_val, forget_train, model=model)
+    m1 = MIA(rt = retain_train, rv = retain_val, test = forget_val, model=model)
+    m2 = MIA(rt = retain_train, rv = retain_val, test = forget_train, model=model)
     print(m1)
     print(m2)
+
+
+

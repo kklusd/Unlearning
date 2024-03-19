@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-import torch.nn.functional as F
 from sklearn.svm import SVC
 from torch.utils.data import DataLoader
 
@@ -57,7 +56,7 @@ def collect_prob(data_loader, model):
                 data, target = get_x_y_from_data_dict(batch, device)
             with torch.no_grad():
                 output = model(data)[0]
-                prob.append(F.softmax(output, dim=-1).data)
+                prob.append(output.data)
                 targets.append(target)
 
     return torch.cat(prob), torch.cat(targets)
@@ -169,18 +168,18 @@ def SVC_MIA(shadow_train, target_train, target_test, shadow_test, model):
     train data:label1 ;val data:label0
     wish forget val label goes to 0 :即被认为没有参与训练
     MIA函数进行了1-mean，结果越靠近1越好"""
-def MIA(retain_train,retain_val,forget_val,model):
+def MIA(rt,rv,test,model):
     test_len = 200
     MIA_batch_size = test_len // 2
-    shadow_train = torch.utils.data.Subset(retain_train, list(range(test_len)))
+    shadow_train = torch.utils.data.Subset(rt, list(range(test_len)))
     shadow_train_loader = torch.utils.data.DataLoader(
         shadow_train, batch_size=MIA_batch_size, shuffle=False
     )
-    shadow_test = torch.utils.data.Subset(retain_val, list(range(test_len)))
+    shadow_test = torch.utils.data.Subset(rv, list(range(test_len)))
     shadow_test_loader = torch.utils.data.DataLoader(
         shadow_test, batch_size=MIA_batch_size, shuffle=False
     )
-    target_test = torch.utils.data.Subset(forget_val, list(range(100)))
+    target_test = torch.utils.data.Subset(test, list(range(100)))
     target_test_loader = torch.utils.data.DataLoader(
         target_test, batch_size=MIA_batch_size, shuffle=False
     )

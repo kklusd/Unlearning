@@ -11,7 +11,7 @@ def parse_option():
     parser.add_argument('--out_dim', type=int, default=128, help='feature dim of simCLR')
     parser.add_argument('--lr', type=float, default=0.001, help='unlearning rate')
     parser.add_argument('--epoches', type=int, default=1, help='unlearning epoches')
-    parser.add_argument('--method', type=str, default='bad_teaching', help='unlearning method')
+    parser.add_argument('--method', type=str, default='neggrad', help='unlearning method')
     parser.add_argument('--mode', type=str, default='random', help='forget mode: classwise or random')
     parser.add_argument('--forget_num', type=int, default=100, help='size of forget set')
     parser.add_argument('--forget_class', type=int, default=0, help='forget class of classwise unlearning')
