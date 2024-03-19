@@ -5,6 +5,11 @@ from torch.utils.data import DataLoader
 import numpy as np
 from .dataset import UnlearningData
 from tqdm import tqdm
+from ..SimCLR.models.resnet_classifier import ResNetClassifier
+from ..SimCLR.models.resnet_simclr import ResNetSimCLR
+from .mu_models import Student
+import torchvision.models as models
+import copy
 
 np.random.seed(123)
 
@@ -96,6 +101,51 @@ def UnlearnLoss(class_logits, student_sim_features, sim_features, labels, compet
     final_loss = loss_weight*sim_loss +1*kl_loss
     return final_loss
 
+def bad_te_model_loader(opt, device):
+    num_class = opt.num_class
+    out_dim = opt.out_dim
+    base_model = opt.base_model
+    if base_model == 'resnet18':
+        unlearn_teacher = models.resnet18(num_classes = num_class,  weights = None)
+        unlearn_teacher.to(device)
+        unlearn_teacher.eval()
+    elif base_model == 'resnet50':
+        unlearn_teacher = models.resnet18(num_classes = num_class, weights = None)
+        unlearn_teacher.to(device)
+        unlearn_teacher.eval()
+    else:
+        raise ValueError(base_model)
+    compete_teacher = ResNetClassifier(num_class=num_class, base_model=base_model)
+    checkpoint_te = torch.load(opt.teacher_path, map_location=device)
+    compete_teacher.load_state_dict(checkpoint_te['state_dict'])
+    compete_teacher.to(device)
+    compete_teacher.eval()
+    simCLR = ResNetSimCLR(base_model=base_model, out_dim=out_dim)
+    checkpoint_sim = torch.load(opt.sim_path, map_location=device)
+    simCLR.load_state_dict(checkpoint_sim['state_dict'])
+    simCLR.to(device)
+    simCLR.eval()
+    student = Student(base_model=base_model, pro_dim=out_dim, num_class=num_class)
+    student_state = copy.deepcopy(student.state_dict())
+    for i in range(len(compete_teacher.state_dict().keys())):
+        key_1 = list(compete_teacher.state_dict().keys())[i]
+        key_2 = list(student.state_dict().keys())[i]
+        student_state[key_2] = copy.deepcopy(compete_teacher.state_dict()[key_1])
+    for i in range(1, 5):
+        key_1 = list(simCLR.state_dict().keys())[-i]
+        key_2 = list(student.state_dict().keys())[-i]
+        student_state[key_2] = copy.deepcopy(simCLR.state_dict()[key_1])
+    student.load_state_dict(student_state)
+    student.to(device)
+
+    for k, v in student.named_parameters():
+        if 'projection_head' in k.split('.'):
+            v.requires_grad_(False)
+    model_dic = {'student': student, 
+                    'unlearning_teacher': unlearn_teacher,
+                    'simclr': simCLR,
+                    'compete_teacher': compete_teacher}
+    return model_dic
 
 def unlearning_step(model, unlearning_teacher, compete_teacher, simclr, data_loader, optimizer, device, KL_temperature, loss_weight):
     losses = []
