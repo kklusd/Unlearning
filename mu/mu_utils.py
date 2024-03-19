@@ -36,29 +36,44 @@ def Evaluation(model_dic,retain_train,retain_val,forget_train,forget_val,opt,dev
     else:
         forget_val_dl = DataLoader(forget_train, opt.batch_size, opt.num_worker, pin_memory=True)
     retain_val_dl = DataLoader(retain_val, opt.batch_size, opt.num_worker, pin_memory=True)
+    if opt.method == 'bad_teaching':
+        model = model_dic['student']
+        competemodel = model_dic['compete_teacher']
 
-    model = model_dic['student']
-    competemodel = model_dic['compete_teacher']
-    print('Before unlearning teacher forget')
-    print(evaluate(competemodel, forget_val_dl, device))
-    print('Before unlearning teacher retain')
-    print(evaluate(competemodel, retain_val_dl, device))
+        #--------------------------------------------------------------
+        print('Before unlearning teacher forget')
+        print(evaluate(competemodel, forget_val_dl, device))
+        print('Before unlearning teacher retain')
+        print(evaluate(competemodel, retain_val_dl, device))
 
-    print('Before unlearning student forget')
-    print(evaluate(model, forget_val_dl, device))
-    print('Before unlearning student retain')
-    print(evaluate(model, retain_val_dl, device))
+        print('Before unlearning student forget')
+        print(evaluate(model, forget_val_dl, device))
+        print('Before unlearning student retain')
+        print(evaluate(model, retain_val_dl, device))
 
-    print('After unlearning epoch {} student forget'.format(opt.epoches))
-    print('After unlearning student forget')
-    print(evaluate(model, forget_val_dl, device))
-    print('After unlearning student retain')
-    print(evaluate(model, retain_val_dl, device))
-    # ------------------other metrics----------------------
-    m1 = MIA(rt = retain_train, rv = retain_val, test = forget_val, model=model)
-    m2 = MIA(rt = retain_train, rv = retain_val, test = forget_train, model=model)
-    print(m1)
-    print(m2)
+        print('After unlearning epoch {} student forget'.format(opt.epoches))
+        print('After unlearning student forget')
+        print(evaluate(model, forget_val_dl, device))
+        print('After unlearning student retain')
+        print(evaluate(model, retain_val_dl, device))
+        # ------------------other metrics----------------------
+        m1 = MIA(rt = retain_train, rv = retain_val, test = forget_val, model=model)
+        m2 = MIA(rt = retain_train, rv = retain_val, test = forget_train, model=model)
+        print(m1)
+        print(m2)
+
+    if opt.method == 'neggrad':
+        model = model_dic['raw_model']
+        print('Before unlearning teacher forget')
+        print(evaluate(model, forget_val_dl, device))
+        print('After unlearning epoch {} student forget'.format(opt.epoches))
+        print('After unlearning student forget')
+        print(evaluate(model, forget_val_dl, device))
+
+        # ------------------other metrics----------------------
+        m1 = MIA(rt=retain_train, rv=retain_val, test=forget_val, model=model)
+        print(m1)
+
 
 
 
