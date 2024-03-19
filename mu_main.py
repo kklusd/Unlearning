@@ -33,8 +33,6 @@ def main():
         Evaluation(student,retain_train, retain_val,forget_train, forget_val,opt,device)
     elif method == 'neggrad':
         model_dic = basic_model_loader(opt, device)
-        compete_teacher = model_dic['compete_teacher']
-
         # ------------------------------dataloader--------------------------------------------------
         unlearn_dl = set_loader(retain_train, forget_train, opt)
 
