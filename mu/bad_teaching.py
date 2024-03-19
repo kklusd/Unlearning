@@ -83,8 +83,8 @@ def set_dataset(data_name, root, mode='classwise', forget_classes=0, forget_num=
         for index in forget_indexes:
             random_forget['val'].append(train_ds[index])
 
-        for index in retain_indexes:
-            random_retain['val'].append(train_ds[index])
+        for img, label in val_ds:
+            random_retain['val'].append((img, label))
 
         return random_forget, random_retain
     else:
