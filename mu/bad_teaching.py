@@ -8,11 +8,11 @@ from torchvision import transforms, datasets
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
 import numpy as np
-from dataset import UnlearningData
+from .dataset import UnlearningData
 from tqdm import tqdm
 from SimCLR.models.resnet_classifier import ResNetClassifier
 from SimCLR.models.resnet_simclr import ResNetSimCLR
-from mu_models import Student
+from .mu_models import Student
 import torchvision.models as models
 import copy
 

@@ -8,7 +8,7 @@ sys.path.append(os.path.join(PROJ_DIR, 'mu'))
 sys.path.append(PROJ_DIR)
 from SimCLR.models.resnet_classifier import ResNetClassifier
 from SimCLR.models.resnet_simclr import ResNetSimCLR
-from mu_models import Student
+from .mu_models import Student
 import copy
     
 # forget set 最大化老师和学生差距，retain set最小化 loss写在一起。 Cross entropy term = 0
@@ -61,8 +61,8 @@ def UnlearnLoss_scrub(class_logits, student_sim_features, sim_features, labels,
     teacher_out = F.softmax(compete_teacher_logits / KL_temperature, dim=1)
     student_class = F.log_softmax(class_logits / KL_temperature, dim=1)
     
-    kl_loss_forget = labels * F.kl_div(student_class, teacher_out,reduction = 'batchmean') 
-    kl_loss_retain = (1-labels) * F.kl_div(student_class, teacher_out,reduction = 'batchmean')
+    kl_loss_forget = F.kl_div(student_class, labels*teacher_out,reduction = 'batchmean') 
+    kl_loss_retain = F.kl_div(student_class, (1-labels) * teacher_out,reduction = 'batchmean')
 
     total_loss = kl_loss_retain - kl_loss_forget
 
@@ -105,6 +105,6 @@ def scrub(model_dic, unlearing_loader, epoch, device,  opt):
 
     loss = unlearning_step_scrub(model=student, compete_teacher=compete_teacher, 
                                 simclr=simclr, data_loader=unlearing_loader,
-                                optimizer=optimizer, device=device, KL_temperature=1)
+                                optimizer=optimizer, device=device, KL_temperature=1, loss_weight=opt.loss_weight)
     
     print("Epoch {} Unlearning Loss {}".format(epoch, loss))
