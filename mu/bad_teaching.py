@@ -1,13 +1,18 @@
+import sys
+import os
+PROJ_DIR = 'D:/Nipstone/gittt/Unlearning-1'
+sys.path.append(os.path.join(PROJ_DIR, 'mu'))
+sys.path.append(PROJ_DIR)
 import torch
 from torchvision import transforms, datasets
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
 import numpy as np
-from .dataset import UnlearningData
+from dataset import UnlearningData
 from tqdm import tqdm
-from ..SimCLR.models.resnet_classifier import ResNetClassifier
-from ..SimCLR.models.resnet_simclr import ResNetSimCLR
-from .mu_models import Student
+from SimCLR.models.resnet_classifier import ResNetClassifier
+from SimCLR.models.resnet_simclr import ResNetSimCLR
+from mu_models import Student
 import torchvision.models as models
 import copy
 
@@ -168,21 +173,24 @@ def unlearning_step(model, unlearning_teacher, compete_teacher, simclr, data_loa
     return np.mean(losses)
 
 
-def bad_teaching(model_dic, unlearing_loader, epoch, device,  opt):
-    unlearning_teacher = model_dic['unlearning_teacher']
-    simclr = model_dic['simclr']
-    compete_teacher = model_dic['compete_teacher']
-    student = model_dic['student']
-    unlearning_teacher.eval()
-    simclr.eval()
-    compete_teacher.eval()
-    optimizer = opt.optimizer
-    if optimizer == 'adam':
-        optimizer = torch.optim.Adam(student.parameters(), lr = opt.lr)
-    else:
-        optimizer = torch.optim.SGD(student.parameters(), lr = opt.lr, momentum = 0.9, weight_decay = 5e-4)
+def bad_teaching(model_dic, unlearing_loader, device,  opt):
+    epoch = 0
+    for i in range(opt.epoches):
+        epoch = i + 1
+        unlearning_teacher = model_dic['unlearning_teacher']
+        simclr = model_dic['simclr']
+        compete_teacher = model_dic['compete_teacher']
+        student = model_dic['student']
+        unlearning_teacher.eval()
+        simclr.eval()
+        compete_teacher.eval()
+        optimizer = opt.optimizer
+        if optimizer == 'adam':
+            optimizer = torch.optim.Adam(student.parameters(), lr = opt.lr)
+        else:
+            optimizer = torch.optim.SGD(student.parameters(), lr = opt.lr, momentum = 0.9, weight_decay = 5e-4)
 
-    loss = unlearning_step(model=student, unlearning_teacher=unlearning_teacher,
-                            compete_teacher=compete_teacher, simclr=simclr, data_loader=unlearing_loader,
-                            optimizer=optimizer, device=device, KL_temperature=1,loss_weight = opt.loss_weight)
-    print("Epoch {} Unlearning Loss {}".format(epoch, loss))
+        loss = unlearning_step(model=student, unlearning_teacher=unlearning_teacher,
+                                compete_teacher=compete_teacher, simclr=simclr, data_loader=unlearing_loader,
+                                optimizer=optimizer, device=device, KL_temperature=1,loss_weight = opt.loss_weight)
+        print("Epoch {} Unlearning Loss {}".format(epoch, loss))

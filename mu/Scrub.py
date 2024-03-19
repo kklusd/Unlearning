@@ -1,9 +1,14 @@
 import torch
 from torch.nn import functional as F
 import numpy as np
-from ..SimCLR.models.resnet_classifier import ResNetClassifier
-from ..SimCLR.models.resnet_simclr import ResNetSimCLR
-from .mu_models import Student
+import sys
+import os
+PROJ_DIR = 'D:/Nipstone/gittt/Unlearning-1'
+sys.path.append(os.path.join(PROJ_DIR, 'mu'))
+sys.path.append(PROJ_DIR)
+from SimCLR.models.resnet_classifier import ResNetClassifier
+from SimCLR.models.resnet_simclr import ResNetSimCLR
+from mu_models import Student
 import copy
     
 # forget set 最大化老师和学生差距，retain set最小化 loss写在一起。 Cross entropy term = 0

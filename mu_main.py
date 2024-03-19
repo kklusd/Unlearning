@@ -11,6 +11,8 @@ def main():
     method = opt.method
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     epoches = opt.epoches
+    forget_set, retain_set = set_dataset(opt.data_name, opt.data_root, mode=opt.mode,
+                                         forget_classes=opt.forget_class, forget_num=opt.forget_num)
     forget_train = forget_set['train']
     forget_val = forget_set['val']
     retain_train = retain_set['train']
@@ -22,14 +24,10 @@ def main():
         compete_teacher = model_dic['compete_teacher']
 
         # ------------------------------dataloader--------------------------------------------------
-        forget_set, retain_set = set_dataset(opt.data_name, opt.data_root, mode=opt.mode,
-                                             forget_classes=opt.forget_class, forget_num=opt.forget_num)
         unlearn_dl = set_loader(retain_train, forget_train, opt)
 
         # ----------------------------Training Process--------------------------------
-        for i in range(epoches):
-            epoch = i + 1
-            bad_teaching(model_dic=model_dic, unlearing_loader=unlearn_dl, epoch=epoch, device=device, opt=opt)
+        bad_teaching(model_dic=model_dic, unlearing_loader=unlearn_dl, device=device, opt=opt)
 
         # ----------------------------Eva--------------------------------
         Evaluation(student,retain_train, retain_val,forget_train, forget_val,opt,device,competemodel=compete_teacher)
