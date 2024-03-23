@@ -21,6 +21,6 @@ def parse_option():
     parser.add_argument('--data_name', type=str, default='cifar10', help='dataset name')
     parser.add_argument('-data_root', type=str, default='./SimCLR/datasets', help='root of dataset')
     parser.add_argument('--loss_weight', type=float, default = 0.5, help='control the clr loss weight')
-
+    parser.add_argument('--supervised_mode', type=str, default="simple", help='simple: direct feature compare; original:augment image and then contrast learning ')
     opt = parser.parse_args()
     return opt
