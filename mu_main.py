@@ -21,16 +21,17 @@ def main():
     if method == 'bad_teaching':
         model_dic = bad_te_model_loader(opt, device)
         student = model_dic['student']
-        compete_teacher = model_dic['compete_teacher']
 
         # ------------------------------dataloader--------------------------------------------------
         unlearn_dl = set_loader(retain_train, forget_train, opt)
 
         # ----------------------------Training Process--------------------------------
-        bad_teaching(model_dic=model_dic, unlearing_loader=unlearn_dl, device=device, opt=opt)
+        for i in range(epoches):
+            epoch = i + 1
+            bad_teaching(model_dic=model_dic, unlearing_loader=unlearn_dl, epoch=epoch, device=device, opt=opt)
 
         # ----------------------------Eva--------------------------------
-        Evaluation(student,retain_train, retain_val,forget_train, forget_val,opt,device)
+        Evaluation(model_dic,retain_train, retain_val,forget_train, forget_val,opt,device)
     elif method == 'neggrad':
         model_dic = basic_model_loader(opt, device)
         # ------------------------------dataloader--------------------------------------------------
@@ -44,14 +45,13 @@ def main():
     elif method == 'scrub':
         model_dic = scrub_model_loader(opt, device)
         student = model_dic['student']
-        compete_teacher = model_dic['compete_teacher']
         forget_set, retain_set = set_dataset(opt.data_name, opt.data_root, mode=opt.mode,
                                              forget_classes=opt.forget_class, forget_num=opt.forget_num)
         unlearn_dl = set_loader(retain_train, forget_train, opt)
         for i in range(epoches):
             epoch = i+1
             scrub(model_dic=model_dic, unlearing_loader=unlearn_dl, epoch=epoch, device=device, opt=opt)
-        Evaluation(student,retain_train, retain_val,forget_train, forget_val,opt,device)
+        Evaluation(model_dic,retain_train, retain_val,forget_train, forget_val,opt,device)
 
 if __name__ == '__main__':
     main()

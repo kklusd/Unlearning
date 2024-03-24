@@ -53,7 +53,7 @@ def Evaluation(model_dic,retain_train,retain_val,forget_train,forget_val,opt,dev
         print('Before unlearning student retain')
         print(evaluate(model, retain_val_dl, device))
 
-        print('After unlearning epoch {} student forget'.format(opt.epoches))
+        print('After unlearning epoch {}'.format(opt.epoches))
         print('After unlearning student forget')
         print(evaluate(model, forget_val_dl, device))
         print('After unlearning student retain')
@@ -99,16 +99,15 @@ def Evaluation(model_dic,retain_train,retain_val,forget_train,forget_val,opt,dev
     print(m2)
 
 def contrast_loss(features, set_labels, batch_size, device, n_views, temperature):
+    criterion = torch.nn.CrossEntropyLoss().to(device)
     labels = torch.cat([torch.arange(batch_size) for i in range(n_views)], dim=0)
     labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
     labels = labels.to(device)
     features = F.normalize(features, dim=1)
-
     similarity_matrix = torch.matmul(features, features.T)
     # assert similarity_matrix.shape == (
     #     self.args.n_views * self.args.batch_size, self.args.n_views * self.args.batch_size)
     # assert similarity_matrix.shape == labels.shape
-
     # discard the main diagonal from both: labels and similarities matrix
     mask = torch.eye(labels.shape[0], dtype=torch.bool).to(device)
     labels = labels[~mask].view(labels.shape[0], -1)
@@ -117,16 +116,18 @@ def contrast_loss(features, set_labels, batch_size, device, n_views, temperature
 
     # select and combine multiple positives
     positives = similarity_matrix[labels.bool()].view(labels.shape[0], -1)
-
+    # print(positives)
     # select only the negatives the negatives
     negatives = similarity_matrix[~labels.bool()].view(similarity_matrix.shape[0], -1)
-
+    set_labels = set_labels.repeat(2)
+    set_labels = set_labels.view(set_labels.shape[0], 1)
+    print("set_labels", set_labels.shape)
     logits = torch.cat([positives, negatives], dim=1)
-    logits = -1 * set_labels * logits
+    logits = set_labels * logits
     labels = torch.zeros(logits.shape[0], dtype=torch.long).to(device)
 
     logits = logits / temperature
-    return torch.nn.CrossEntropyLoss(logits, labels)
+    return criterion(logits, labels)
 
 def simple_contrast_loss(student_sim_features, sim_features, set_labels):
     student_sim = F.normalize(student_sim_features, dim=1)

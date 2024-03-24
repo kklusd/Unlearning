@@ -55,6 +55,7 @@ def scrub_model_loader(opt, device):
 def UnlearnLoss_scrub(class_logits, loss_contrast, labels,
                         compete_teacher_logits, KL_temperature, loss_weight):
     labels = torch.unsqueeze(labels, dim=1)
+    labels = labels.repeat(2, 1)
     teacher_out = F.softmax(compete_teacher_logits / KL_temperature, dim=1)
     student_class = F.log_softmax(class_logits / KL_temperature, dim=1)
     
@@ -70,6 +71,7 @@ def unlearning_step_scrub(model, model_dic, data_loader, optimizer, device, KL_t
     losses = []
     for batch in data_loader:
         x, y = batch
+        x = torch.cat(x, dim=0)
         x, y = x.to(device), y.to(device)
         class_logits, student_sim_feature = model(x)
         with torch.no_grad():

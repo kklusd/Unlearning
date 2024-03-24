@@ -98,6 +98,7 @@ def set_dataset(data_name, root, mode='classwise', forget_classes=0, forget_num=
 
 def UnlearnLoss(class_logits, loss_contrast, labels, compete_teacher_logits, unlearn_teacher_logits, KL_temperature,loss_weight):
     labels = torch.unsqueeze(labels, dim=1)
+    labels = labels.repeat(2, 1)
     f_teacher_out = F.softmax(compete_teacher_logits / KL_temperature, dim=1)
     u_teacher_out = F.softmax(unlearn_teacher_logits / KL_temperature, dim=1)
     overall_teacher_out = labels * u_teacher_out + (1-labels)*f_teacher_out
@@ -157,6 +158,7 @@ def unlearning_step(model, model_dic, data_loader, optimizer, device, KL_tempera
     losses = []
     for batch in tqdm(data_loader, desc='test',leave=False):
         x, y = batch
+        x = torch.cat(x, dim=0)
         x, y = x.to(device), y.to(device)
         class_logits, student_sim_feature = model(x)
         with torch.no_grad():
@@ -166,7 +168,7 @@ def unlearning_step(model, model_dic, data_loader, optimizer, device, KL_tempera
                 sim_features = model_dic['simclr'](x)
                 loss_contrast = simple_contrast_loss(student_sim_feature, sim_features, y)
             elif supervised_mode == "original":
-                batch_size = x.shape[0]
+                batch_size = x.shape[0] / 2
                 loss_contrast = contrast_loss(student_sim_feature, y, batch_size, device, n_views=2, temperature=1)
             else:
                 raise ValueError(supervised_mode)
@@ -190,5 +192,6 @@ def bad_teaching(model_dic, unlearing_loader, epoch, device,  opt):
         optimizer = torch.optim.SGD(student.parameters(), lr = opt.lr, momentum = 0.9, weight_decay = 5e-4)
 
     loss = unlearning_step(model=student, model_dic=model_dic, data_loader=unlearing_loader,
-                            optimizer=optimizer, device=device, KL_temperature=1,loss_weight = opt.loss_weight)
+                            optimizer=optimizer, device=device, KL_temperature=1,
+                            loss_weight = opt.loss_weight, supervised_mode=opt.supervised_mode)
     print("Epoch {} Unlearning Loss {}".format(epoch, loss))
