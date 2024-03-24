@@ -71,7 +71,8 @@ def unlearning_step_scrub(model, model_dic, data_loader, optimizer, device, KL_t
     losses = []
     for batch in data_loader:
         x, y = batch
-        x = torch.cat(x, dim=0)
+        if supervised_mode == "original":
+            x = torch.cat(x, dim=0)
         x, y = x.to(device), y.to(device)
         class_logits, student_sim_feature = model(x)
         with torch.no_grad():

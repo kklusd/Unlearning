@@ -30,7 +30,6 @@ def unlearning_step(model, data_loader, optimizer, device):
     for batch in tqdm(data_loader, desc='test', leave=False):
         # for batch in data_loader:
         x, y = batch
-        x = torch.cat(x, dim=0)
         x, y = x.to(device), y.to(device)
         class_logits = model(x)
         optimizer.zero_grad()
