@@ -48,10 +48,6 @@ def Evaluation(model_dic,retain_train,retain_val,forget_train,forget_val,opt,dev
         print('Before unlearning teacher retain')
         print(evaluate(competemodel, retain_val_dl, device))
 
-        print('Before unlearning student forget')
-        print(evaluate(model, forget_val_dl, device))
-        print('Before unlearning student retain')
-        print(evaluate(model, retain_val_dl, device))
 
         print('After unlearning epoch {}'.format(opt.epoches))
         print('After unlearning student forget')
@@ -79,24 +75,24 @@ def Evaluation(model_dic,retain_train,retain_val,forget_train,forget_val,opt,dev
 
 
 
-    print('Before unlearning teacher forget')
-    print(evaluate(competemodel, forget_val_dl, device))
-    print('Before unlearning teacher retain')
-    print(evaluate(competemodel, retain_val_dl, device))
+    # print('Before unlearning teacher forget')
+    # print(evaluate(competemodel, forget_val_dl, device))
+    # print('Before unlearning teacher retain')
+    # print(evaluate(competemodel, retain_val_dl, device))
 
-    print('Before unlearning student forget')
-    print(evaluate(model, forget_val_dl, device))
-    print('Before unlearning student retain')
-    print(evaluate(model, retain_val_dl, device))
+    # print('Before unlearning student forget')
+    # print(evaluate(model, forget_val_dl, device))
+    # print('Before unlearning student retain')
+    # print(evaluate(model, retain_val_dl, device))
 
-    print('After unlearning epoch {} student forget'.format(opt.epoches))
-    print(evaluate(model, forget_val_dl, device))
-    print(evaluate(model, retain_val_dl, device))
-    # ------------------other metrics----------------------
-    m1 = MIA(retain_train, retain_val, forget_val, model=model)
-    m2 = MIA(retain_train, retain_val, forget_train, model=model)
-    print(m1)
-    print(m2)
+    # print('After unlearning epoch {} student forget'.format(opt.epoches))
+    # print(evaluate(model, forget_val_dl, device))
+    # print(evaluate(model, retain_val_dl, device))
+    # # ------------------other metrics----------------------
+    # m1 = MIA(retain_train, retain_val, forget_val, model=model)
+    # m2 = MIA(retain_train, retain_val, forget_train, model=model)
+    # print(m1)
+    # print(m2)
 
 def contrast_loss(features, set_labels, batch_size, device, n_views, temperature):
     criterion = torch.nn.CrossEntropyLoss().to(device)
@@ -119,15 +115,17 @@ def contrast_loss(features, set_labels, batch_size, device, n_views, temperature
     # print(positives)
     # select only the negatives the negatives
     negatives = similarity_matrix[~labels.bool()].view(similarity_matrix.shape[0], -1)
-    set_labels = set_labels.repeat(2)
+    set_labels = set_labels.repeat(n_views)
     set_labels = set_labels.view(set_labels.shape[0], 1)
-    print("set_labels", set_labels.shape)
+    # print("set_labels", set_labels.shape)
+    positives = -set_labels * positives
     logits = torch.cat([positives, negatives], dim=1)
-    logits = set_labels * logits
+    # logits = -set_labels * logits
     labels = torch.zeros(logits.shape[0], dtype=torch.long).to(device)
 
     logits = logits / temperature
     return criterion(logits, labels)
+    # return torch.sum(positives)
 
 def simple_contrast_loss(student_sim_features, sim_features, set_labels):
     student_sim = F.normalize(student_sim_features, dim=1)

@@ -12,7 +12,10 @@ class ContrastiveViewGenerator:
         self.n_views = n_views
 
     def generate(self, x):
-        return [self.base_transform(x) for i in range(self.n_views)]
+        img_ls = [x]
+        for i in range(self.n_views - 1):
+            img_ls.append(self.base_transform(x))
+        return img_ls
 
 
 
