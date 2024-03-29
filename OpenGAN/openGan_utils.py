@@ -29,7 +29,7 @@ class FeaturesSet(Dataset):
             return x, y
         else:
             x = self.retain_features[index - self.forget_set_len]
-            y = 1
+            y = 0
             return x, y
         
     
