@@ -6,7 +6,7 @@ def parse_option():
     parser.add_argument('--teacher_path', type=str, default='./SimCLR/runs/original_model/checkpoint_0200.pth.tar',
                         help='teacher model path')
     parser.add_argument('--num_class', type=int, default=10, help='number of classes in dataset')
-    parser.add_argument('--sim_path', type=str, default='./SimCLR/runs/sim_model/checkpoint_0120.pth.tar',
+    parser.add_argument('--sim_path', type=str, default='./SimCLR/runs/sim_model/checkpoint_0200.pth.tar',
                         help='simCLR model path')
     parser.add_argument('--out_dim', type=int, default=128, help='feature dim of simCLR')
     parser.add_argument('--lr', type=float, default=0.001, help='unlearning rate')

@@ -1,14 +1,15 @@
-from ..mu_models import BasicResnet
+from mu.mu_models import BasicResnet
 import torch
 import copy
 from torch.utils.data import Dataset, DataLoader
-import tqdm
+from tqdm import tqdm
 import os
 
 class OwnDataset(Dataset):
     def __init__(self, data):
         super().__init__()
         self.data = data
+    
     def __len__(self):
         return len(self.data)
     
@@ -30,10 +31,11 @@ def feature_model_loader(base_model, out_dim, state_dict_path, device):
     return new_resnet
 
 
-class features_generator:
+class FeaturesGenerator:
     def __init__(self, base_model, out_dim, state_dict_path, device):
         model = feature_model_loader(base_model, out_dim, state_dict_path, device)
         self.model = model.eval()
+        self.device = device
 
     def generate(self, forget_data, retain_data, batch_size, out_path):
         forget_set = OwnDataset(forget_data)
@@ -41,16 +43,17 @@ class features_generator:
         forget_loader = DataLoader(forget_set, batch_size=batch_size, shuffle=False, 
                                    num_workers=2, pin_memory=True)
         retain_loader = DataLoader(retain_set, batch_size=batch_size, shuffle=False, 
-                                  num_works=2, pin_memory=True)
+                                  num_workers=2, pin_memory=True)
+        print(type(forget_loader))
         forget_features = []
         retain_features = []
         for batch in tqdm(forget_loader, desc='forget features generate',leave=False):
-            x = batch
-            features = self.model(x)
+            x = batch.to(self.device)
+            features = self.model(x).detach().unsqueeze_(-1).unsqueeze_(-1)
             forget_features.append(features)
         for batch in tqdm(retain_loader, desc='retain features generate', leave=False):
-            x = batch
-            features = self.model(x)
+            x = batch.to(self.device)
+            features = self.model(x).detach().unsqueeze_(-1).unsqueeze_(-1)
             retain_features.append(features)
         forget_features = torch.cat(forget_features, dim=0).cpu()
         torch.save(forget_features, os.path.join(out_path, 'forget_features.pt'))

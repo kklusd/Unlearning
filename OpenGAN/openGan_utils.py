@@ -1,8 +1,7 @@
 from torch.utils.data import Dataset
 import torch
-from network import Generator, Discriminator
+from .network import Generator, Discriminator
 import torch.nn as nn
-torch.random.seed(123)
 
 def weights_init(m):
     classname = m.__class__.__name__
@@ -30,7 +29,7 @@ class FeaturesSet(Dataset):
             return x, y
         else:
             x = self.retain_features[index - self.forget_set_len]
-            y = 0
+            y = 1
             return x, y
         
     
