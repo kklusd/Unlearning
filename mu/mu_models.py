@@ -5,7 +5,7 @@ import torch
 
 
 class BasicResnet(nn.Module):
-    def __init__(self, base_model, out_dim, pretrained):
+    def __init__(self, base_model, out_dim):
         super(BasicResnet, self).__init__()
         if base_model == 'resnet18':
             self.base = models.resnet18(weights=None, num_classes=out_dim)
@@ -19,7 +19,7 @@ class BasicResnet(nn.Module):
         return self.base(x)
     
 class LinearClassifier(nn.Module):
-    def __init__(self, base_model, pretrained, num_class):
+    def __init__(self, base_model, num_class):
         super(LinearClassifier, self).__init__()
         if base_model == 'resnet18':
             base = models.resnet18(weights=None, num_classes=num_class)
@@ -34,7 +34,7 @@ class LinearClassifier(nn.Module):
         return self.fc(features)
     
 class ProjectionHead(nn.Module):
-    def __init__(self, base_model, pretrained, out_dim):
+    def __init__(self, base_model, out_dim):
         super(ProjectionHead,self).__init__()
 
         if base_model == 'resnet18':
@@ -52,11 +52,11 @@ class ProjectionHead(nn.Module):
         return self.pro_head(features)
 
 class Student(nn.Module):
-    def __init__(self, base_model, pro_dim, num_class, pretrained=False) -> None:
+    def __init__(self, base_model, pro_dim, num_class) -> None:
         super(Student, self).__init__()
-        self.base_model = BasicResnet(base_model=base_model, out_dim=128, pretrained=pretrained)
-        self.classifier = LinearClassifier(base_model=base_model, pretrained=pretrained, num_class=num_class)
-        self.projection_head = ProjectionHead(base_model=base_model, pretrained=pretrained, out_dim=pro_dim)
+        self.base_model = BasicResnet(base_model=base_model, out_dim=128)
+        self.classifier = LinearClassifier(base_model=base_model, num_class=num_class)
+        self.projection_head = ProjectionHead(base_model=base_model, out_dim=pro_dim)
 
     def forward(self, x):
         feature = self.base_model(x)
