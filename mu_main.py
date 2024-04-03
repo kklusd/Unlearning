@@ -4,15 +4,26 @@ from mu.mu_utils import Evaluation
 import mu.arg_parser as parser
 from mu.Scrub import scrub, scrub_model_loader
 from mu.mu_basic import Neggrad,basic_model_loader
-
+import os
+import pickle
 
 def main():
     opt = parser.parse_option()
     method = opt.method
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:7" if torch.cuda.is_available() else "cpu")
     epoches = opt.epoches
-    forget_set, retain_set = set_dataset(opt.data_name, opt.data_root, mode=opt.mode,
-                                         forget_classes=opt.forget_class, forget_num=opt.forget_num)
+    if opt.mode == 'random' and opt.saved_data_path != '':
+        forget_data_file = os.path.join(opt.saved_data_path, 'forget_data.pt')
+        retain_data_file = os.path.join(opt.saved_data_path, 'retain_data.pt')
+        with open(forget_data_file, 'rb') as f:
+                forget_set = pickle.load(f)
+                f.close()
+        with open(retain_data_file, 'rb') as f:
+            retain_set = pickle.load(f)
+            f.close()
+    else:
+        forget_set, retain_set = set_dataset(opt.data_name, opt.data_root, mode=opt.mode,
+                                            forget_classes=opt.forget_class, forget_num=opt.forget_num)
     forget_train = forget_set['train']
     forget_val = forget_set['val']
     retain_train = retain_set['train']

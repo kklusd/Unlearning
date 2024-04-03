@@ -36,12 +36,12 @@ parser.add_argument('--save_dir', type=str, default='OpenGAN/OpenGAN_runs', help
 def get_features(args, device):
     if args.features_path != '':
         forget_features_file = os.path.join(args.features_path, 'forget_features.pt')
-        retain_features_file = os.path.join(args.features_path, 'retain`_features.pt')
+        retain_features_file = os.path.join(args.features_path, 'retain_features.pt')
         with open(forget_features_file, 'rb') as f:
-            forget_features = pickle.load(f)
+            forget_features = torch.load(f)
             f.close()
         with open(retain_features_file, 'rb') as f:
-            retain_features = pickle.load(f)
+            retain_features = torch.load(f)
             f.close()
     else:
         if args.data_path != '':
@@ -54,7 +54,7 @@ def get_features(args, device):
                 retain_set = pickle.load(f)
                 f.close()
             forget_data = forget_set['train']
-            retain_data = retain_set['val'][0:500]
+            retain_data = retain_set['val']
         else:
             forget_data_file = os.path.join('mu/saved_data', 'forget_data.pt')
             retain_data_file = os.path.join('mu/saved_data', 'retain_data.pt')
@@ -67,7 +67,7 @@ def get_features(args, device):
                 pickle.dump(retain_set, f)
                 f.close()
             forget_data = forget_set['train']
-            retain_data = retain_set['val'][0:500]
+            retain_data = retain_set['val']
         new_feat_generator = FeaturesGenerator(base_model=args.base_model, out_dim=128, 
                                              state_dict_path=args.state_dict_path, device=device)
         forget_features, retain_features = new_feat_generator.generate(forget_data, retain_data, 
@@ -79,7 +79,7 @@ def main():
     device = torch.device('cuda:7') if torch.cuda.is_available() else torch.device('cpu')
     criterion = nn.BCELoss()
     forget_features, retain_features = get_features(args, device)
-    feature_set = FeaturesSet(forget_features=forget_features, retain_features=retain_features)
+    feature_set = FeaturesSet(forget_features=forget_features, retain_features=retain_features[0:0])
     feature_loader = DataLoader(feature_set, batch_size=args.batch_size, shuffle=True, 
                                    num_workers=2, pin_memory=True)
     netG, netD = model_init(args, device)

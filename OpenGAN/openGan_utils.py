@@ -2,6 +2,9 @@ from torch.utils.data import Dataset
 import torch
 from .network import Generator, Discriminator
 import torch.nn as nn
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
+import numpy as np
 
 def weights_init(m):
     classname = m.__class__.__name__
@@ -39,3 +42,22 @@ def model_init(args, device):
     new_discriminator = Discriminator(nc=args.ots_size, ndf=args.ndf).to(device)
     new_discriminator.apply(weights_init)
     return new_generator, new_discriminator
+
+def t_sne_visial(real_features, gen_features):
+    real_fea_len = real_features.shape[0]
+    gen_fea_len = gen_features.shape[0]
+    features = np.concatenate([real_features, gen_features], axis=0)
+    tsne_result = TSNE(n_components=2).fit_transform(features)
+    def scale_to_01_range(x):
+        value_range = (np.max(x) - np.min(x))
+        starts_from_zero = x - np.min(x)
+        return starts_from_zero / value_range
+    tsne_x = scale_to_01_range(tsne_result[:,0])
+    tsne_y = scale_to_01_range(tsne_result[:,1])
+    colors = ['b', 'c']
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.scatter(tsne_x[0:real_fea_len], tsne_y[0:real_fea_len], c=colors[0], label='real')
+    ax.scatter(tsne_x[real_fea_len:], tsne_y[real_fea_len:], c=colors[1], label='generate')
+    ax.legend(loc='best')
+    plt.savefig("tsne.png")
