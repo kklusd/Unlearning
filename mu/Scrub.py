@@ -1,11 +1,6 @@
 import torch
 from torch.nn import functional as F
 import numpy as np
-import sys
-import os
-PROJ_DIR = 'D:/Nipstone/gittt/Unlearning-1'
-sys.path.append(os.path.join(PROJ_DIR, 'mu'))
-sys.path.append(PROJ_DIR)
 from SimCLR.models.resnet_classifier import ResNetClassifier
 from SimCLR.models.resnet_simclr import ResNetSimCLR
 from .mu_models import Student

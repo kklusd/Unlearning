@@ -85,3 +85,18 @@ class ContrastiveUnlearningData(Dataset):
             augmented_x =  self.view_generator.generate(x)
             y = 0
             return augmented_x,  y
+
+
+class BasicUnlearningData(Dataset):
+    def __init__(self, forget_data):
+        super().__init__()
+        self.forget_data = forget_data
+        self.forget_len = len(forget_data)
+
+    def __len__(self):
+        return self.forget_len
+
+    def __getitem__(self, index):
+            x = self.forget_data[index][0]
+            y = self.forget_data[index][1]
+            return x,y

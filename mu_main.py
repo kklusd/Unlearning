@@ -3,14 +3,14 @@ from mu.bad_teaching import set_dataset, set_loader, bad_teaching, bad_te_model_
 from mu.mu_utils import Evaluation
 import mu.arg_parser as parser
 from mu.Scrub import scrub, scrub_model_loader
-from mu.mu_basic import Neggrad,basic_model_loader
+from mu.mu_basic import Neggrad,basic_model_loader,set_basic_loader
 import os
 import pickle
 
 def main():
     opt = parser.parse_option()
     method = opt.method
-    device = torch.device("cuda:7" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     epoches = opt.epoches
     if opt.mode == 'random' and opt.saved_data_path != '':
         forget_data_file = os.path.join(opt.saved_data_path, 'forget_data.pt')
@@ -28,7 +28,7 @@ def main():
     forget_val = forget_set['val']
     retain_train = retain_set['train']
     retain_val = retain_set['val']
-#---------------------------------你俩和一下-------------------------------------------
+#---------------------------------method-------------------------------------------
     if method == 'bad_teaching':
         model_dic = bad_te_model_loader(opt, device)
         student = model_dic['student']
@@ -46,7 +46,7 @@ def main():
     elif method == 'neggrad':
         model_dic = basic_model_loader(opt, device)
         # ------------------------------dataloader--------------------------------------------------
-        unlearn_dl = set_loader(retain_train, forget_train, opt)
+        unlearn_dl = set_basic_loader(forget_train, opt)
 
         # ----------------------------Training Process--------------------------------
         Neggrad(model_dic=model_dic, unlearing_loader=unlearn_dl, device=device, opt=opt)

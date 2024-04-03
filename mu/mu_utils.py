@@ -6,11 +6,12 @@ import numpy as np
 
 def accuracy(outputs, labels):
     _, preds = torch.max(outputs, dim=1)
-    return torch.tensor(torch.sum(preds==labels).item() / len(preds)) * 100
+    return torch.tensor(torch.sum(preds==labels).item() / len(preds)) * 100  #100
 
 def validation_step(model, batch, device):
     images, labels = batch
     images, labels = images.to(device), labels.to(device)
+    model = model.to(device)
     out = model(images)
     if type(out) == tuple:
         out = out[0]
@@ -38,6 +39,9 @@ def Evaluation(model_dic,retain_train,retain_val,forget_train,forget_val,opt,dev
     else:
         forget_val_dl = DataLoader(forget_train, opt.batch_size, opt.num_worker, pin_memory=True)
     retain_val_dl = DataLoader(retain_val, opt.batch_size, opt.num_worker, pin_memory=True)
+    retain_train_dl = DataLoader(retain_train, opt.batch_size, opt.num_worker, pin_memory=True)
+    forget_train_dl = DataLoader(forget_train, opt.batch_size, opt.num_worker, pin_memory=True)
+
     if opt.method == 'bad_teaching':
         model = model_dic['student']
         competemodel = model_dic['compete_teacher']
@@ -47,52 +51,41 @@ def Evaluation(model_dic,retain_train,retain_val,forget_train,forget_val,opt,dev
         print(evaluate(competemodel, forget_val_dl, device))
         print('Before unlearning teacher retain')
         print(evaluate(competemodel, retain_val_dl, device))
-
-
         print('After unlearning epoch {}'.format(opt.epoches))
         print('After unlearning student forget')
-        print(evaluate(model, forget_val_dl, device))
+        print(evaluate(model, forget_val_dl, device))#instance时候没有意义
         print('After unlearning student retain')
         print(evaluate(model, retain_val_dl, device))
         # ------------------other metrics----------------------
-        m1 = MIA(rt = retain_train, rv = retain_val, test = forget_val, model=model)
         m2 = MIA(rt = retain_train, rv = retain_val, test = forget_train, model=model)
-        print(m1)
         print(m2)
 
     if opt.method == 'neggrad':
         model = model_dic['raw_model']
-        print('Before unlearning teacher forget')
-        print(evaluate(model, forget_val_dl, device))
-        print('After unlearning epoch {} student forget'.format(opt.epoches))
-        print('After unlearning student forget')
-        print(evaluate(model, forget_val_dl, device))
+        competemodel = model_dic['compete_model']
+
+        print('Before unlearning forget')
+        Eva_Dr_before = evaluate(competemodel, retain_train_dl,device)
+        Eva_Df_before = evaluate(competemodel, forget_train_dl,device)
+        print(Eva_Df_before)
+        print('After unlearning epoch {} forget'.format(opt.epoches))
+        Eva_Dt_after = evaluate(model, forget_val_dl,device)
+        print(Eva_Dt_after)
+        Eva_Dr_after = evaluate(model, retain_train_dl,device)
+        Eva_Df_after = evaluate(model, forget_train_dl,device)
+
+        print('AccDr:{}'.format(Eva_Dr_after['Acc']))
+        print('AccDf:{}'.format(100-Eva_Df_after['Acc']))
+        print('AccDt:{}'.format(Eva_Dt_after['Acc']))
+        print(Eva_Df_before['Acc'],Eva_Df_after['Acc'] , Eva_Dr_after['Acc'] ,Eva_Dr_before['Acc'])
+
+        print('Geo_metric:{}'.format((Eva_Df_before['Acc']-Eva_Df_after['Acc'])*(Eva_Dr_after['Acc']-Eva_Dr_before['Acc'])))
+
 
         # ------------------other metrics----------------------
-        m1 = MIA(rt=retain_train, rv=retain_val, test=forget_val, model=model)
+        m1 = MIA(rt=retain_train, rv=retain_val, test=forget_train, model=model,method = opt.method)
         print(m1)
 
-
-
-
-    # print('Before unlearning teacher forget')
-    # print(evaluate(competemodel, forget_val_dl, device))
-    # print('Before unlearning teacher retain')
-    # print(evaluate(competemodel, retain_val_dl, device))
-
-    # print('Before unlearning student forget')
-    # print(evaluate(model, forget_val_dl, device))
-    # print('Before unlearning student retain')
-    # print(evaluate(model, retain_val_dl, device))
-
-    # print('After unlearning epoch {} student forget'.format(opt.epoches))
-    # print(evaluate(model, forget_val_dl, device))
-    # print(evaluate(model, retain_val_dl, device))
-    # # ------------------other metrics----------------------
-    # m1 = MIA(retain_train, retain_val, forget_val, model=model)
-    # m2 = MIA(retain_train, retain_val, forget_train, model=model)
-    # print(m1)
-    # print(m2)
 
 def contrast_loss(features, set_labels, batch_size, device, n_views, temperature):
     criterion = torch.nn.CrossEntropyLoss().to(device)
@@ -133,4 +126,5 @@ def simple_contrast_loss(student_sim_features, sim_features, set_labels):
     similarity = torch.sum(sim*student_sim, dim=-1)
     adj_weight = 1 / (1 + np.e ** (1 - 2 * torch.count_nonzero(set_labels).item() / set_labels.numel()))
     sim_loss = (1 - adj_weight) * torch.mean(set_labels * similarity) + adj_weight * torch.mean((set_labels - 1) * similarity)
+
     return sim_loss

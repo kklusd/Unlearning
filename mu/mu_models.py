@@ -63,3 +63,17 @@ class Student(nn.Module):
         class_logit = self.classifier(feature)
         sim_feature = self.projection_head(feature)
         return class_logit, sim_feature
+
+
+class BasicClassifier(nn.Module):
+    def __init__(self, base_model, pro_dim, num_class, pretrained=False) -> None:
+        super(Student, self).__init__()
+        self.base_model = BasicResnet(base_model=base_model, out_dim=128, pretrained=pretrained)
+        self.classifier = LinearClassifier(base_model=base_model, pretrained=pretrained, num_class=num_class)
+
+    def forward(self, x):
+        feature = self.base_model(x)
+        class_logit = self.classifier(feature)
+        return class_logit
+
+

@@ -1,8 +1,3 @@
-import sys
-import os
-PROJ_DIR = 'D:/Nipstone/gittt/Unlearning-1'
-sys.path.append(os.path.join(PROJ_DIR, 'mu'))
-sys.path.append(PROJ_DIR)
 import torch
 from torchvision import transforms, datasets
 from torch.nn import functional as F
@@ -89,6 +84,8 @@ def set_dataset(data_name, root, mode='classwise', forget_classes=0, forget_num=
         for index in forget_indexes:
             random_forget['val'].append(train_ds[index])
 
+        #for index in retain_indexes:
+            #random_retain['val'].append(train_ds[index])
         for img, label in val_ds:
             random_retain['val'].append((img, label))
 
@@ -143,8 +140,8 @@ def bad_te_model_loader(opt, device):
         if 'projection_head' in k.split('.'):
             v.requires_grad_(False)
     model_dic = {'student': student, 
-                    'unlearning_teacher': unlearn_teacher,
-                    'compete_teacher': compete_teacher}
+                 'unlearning_teacher': unlearn_teacher,
+                 'compete_teacher': compete_teacher}
     if opt.supervised_mode == "simple":
         simCLR = ResNetSimCLR(base_model=base_model, out_dim=out_dim)
         simCLR.load_state_dict(checkpoint_sim['state_dict'])
@@ -155,7 +152,7 @@ def bad_te_model_loader(opt, device):
 
 def unlearning_step(model, model_dic, data_loader, optimizer, device, KL_temperature, loss_weight, supervised_mode):
     losses = []
-    for batch in tqdm(data_loader, desc='test',leave=False):
+    for batch in tqdm(data_loader, desc='training',leave=False):
         x, y = batch
         if supervised_mode == "original":
             batch_size = int(x[0].shape[0])
