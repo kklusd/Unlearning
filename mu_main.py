@@ -6,7 +6,7 @@ from mu.Scrub import scrub, scrub_model_loader
 from mu.mu_basic import Neggrad,basic_model_loader,set_basic_loader
 import os
 import pickle
-
+from mu.mu_data import aug
 def main():
     opt = parser.parse_option()
     method = opt.method
@@ -28,6 +28,7 @@ def main():
     forget_val = forget_set['val']
     retain_train = retain_set['train']
     retain_val = retain_set['val']
+
 #---------------------------------method-------------------------------------------
     if method == 'bad_teaching':
         model_dic = bad_te_model_loader(opt, device)
@@ -44,9 +45,11 @@ def main():
         # ----------------------------Eva--------------------------------
         Evaluation(model_dic,retain_train, retain_val,forget_train, forget_val,opt,device)
     elif method == 'neggrad':
+        if True:
+            forget_train2 = aug(forget_train)
         model_dic = basic_model_loader(opt, device)
         # ------------------------------dataloader--------------------------------------------------
-        unlearn_dl = set_basic_loader(forget_train, opt)
+        unlearn_dl = set_basic_loader(forget_train2, opt)
 
         # ----------------------------Training Process--------------------------------
         Neggrad(model_dic=model_dic, unlearing_loader=unlearn_dl, device=device, opt=opt)

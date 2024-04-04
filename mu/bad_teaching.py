@@ -25,7 +25,7 @@ def set_loader(retain_data, forget_data, opt):
                                    num_workers=opt.num_worker, pin_memory=True)
     return unlearning_loader
 
-def set_dataset(data_name, root, mode='classwise', forget_classes=0, forget_num=0):
+def set_dataset(data_name, root, mode='classwise', forget_classes=0, forget_num=0,require_index = False,augment = False):
     if data_name == 'cifar10':
         size = 32
         mean = (0.4914, 0.4822, 0.4465)
@@ -74,7 +74,8 @@ def set_dataset(data_name, root, mode='classwise', forget_classes=0, forget_num=
         retain_indexes = all_indexes[forget_num:]
         random_forget = {'train':[], 'val': []}
         random_retain = {'train': [], 'val': []}
-        
+        if require_index:
+            return forget_indexes
         for index in forget_indexes:
             random_forget['train'].append(train_ds[index])
 
