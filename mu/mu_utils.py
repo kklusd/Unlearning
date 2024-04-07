@@ -84,11 +84,10 @@ def Evaluation(model_dic,retain_train,retain_val,forget_train,forget_val,opt,dev
 
     if opt.method == 'retrain':
         model = model_dic['raw_model']
-        competemodel = model_dic['compete_model']
 
         print('Before unlearning forget')
-        Eva_Dr_before = evaluate(competemodel, retain_train_dl,device)
-        Eva_Df_before = evaluate(competemodel, forget_train_dl,device)
+        Eva_Dr_before = evaluate(model, retain_train_dl,device)
+        Eva_Df_before = evaluate(model, forget_train_dl,device)
         print(Eva_Df_before)
         print('After unlearning epoch {} forget'.format(opt.epoches))
         Eva_Dt_after = evaluate(model, forget_val_dl,device)

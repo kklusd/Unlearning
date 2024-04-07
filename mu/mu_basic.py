@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from tqdm import tqdm
-from SimCLR.models.resnet_classifier import ResNetClassifier
+from SimCLR.models.resnet_classifier import ResNetClassifier,ResNetClassifier_retrain
 from torch.utils.data import DataLoader
 
 from .mu_models import BasicClassifier
@@ -15,17 +15,21 @@ def set_basic_loader(forget_data, opt):
     return unlearning_loader
 def basic_model_loader(opt, device):
     num_class = opt.num_class
-    out_dim = opt.out_dim
     base_model = opt.base_model
-    raw_model = ResNetClassifier(num_class=num_class, base_model=base_model)
-    checkpoint_te = torch.load(opt.teacher_path, map_location=device)
-    raw_model.load_state_dict(checkpoint_te['state_dict'])
-    raw_model.to(device)
-    competemodel = ResNetClassifier(num_class=num_class, base_model=base_model)
-    competemodel.load_state_dict(checkpoint_te['state_dict'])
-    competemodel.to(device)
-    competemodel.eval()
-    model_dic = {'raw_model': raw_model,'compete_model': competemodel}
+    if opt.method == 'neggrad':
+        raw_model = ResNetClassifier(num_class=num_class, base_model=base_model)
+        checkpoint_te = torch.load(opt.teacher_path, map_location=device)
+        raw_model.load_state_dict(checkpoint_te['state_dict'])
+        raw_model.to(device)
+        competemodel = ResNetClassifier(num_class=num_class, base_model=base_model)
+        competemodel.load_state_dict(checkpoint_te['state_dict'])
+        competemodel.to(device)
+        competemodel.eval()
+        model_dic = {'raw_model': raw_model,'compete_model': competemodel}
+    elif opt.method == 'retrain':
+        raw_model = ResNetClassifier_retrain(num_class=num_class,base_model=base_model)
+        raw_model.to(device)
+        model_dic = {'raw_model': raw_model}
     return model_dic
 
 

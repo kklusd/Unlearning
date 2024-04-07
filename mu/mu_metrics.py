@@ -59,10 +59,11 @@ def collect_prob(data_loader, model,method):
                     output = model(data)[0]
                     prob.append(output.data)
                     targets.append(target)
-                elif method == 'neggrad':
+                elif method == 'neggrad' or  method == 'retrain':
                     output = model(data)
                     prob.append(output)
                     targets.append(target)
+
 
     return torch.cat(prob), torch.cat(targets)
 
