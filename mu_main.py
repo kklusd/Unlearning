@@ -1,12 +1,14 @@
+import numpy as np
 import torch
 from mu.bad_teaching import set_dataset, set_loader, bad_teaching, bad_te_model_loader
 from mu.mu_utils import Evaluation
 import mu.arg_parser as parser
 from mu.Scrub import scrub, scrub_model_loader
-from mu.mu_basic import Neggrad,basic_model_loader,set_basic_loader
+from mu.mu_basic import Neggrad,basic_model_loader,set_basic_loader,Retrain
 import os
 import pickle
 from mu.mu_data import aug
+import copy
 def main():
     opt = parser.parse_option()
     method = opt.method
@@ -46,13 +48,25 @@ def main():
         Evaluation(model_dic,retain_train, retain_val,forget_train, forget_val,opt,device)
     elif method == 'neggrad':
         if True:
-            forget_train2 = aug(forget_train)
+            forget_train2 = copy.deepcopy(forget_train)
+            forget_train2 = aug(forget_train2)
         model_dic = basic_model_loader(opt, device)
         # ------------------------------dataloader--------------------------------------------------
         unlearn_dl = set_basic_loader(forget_train2, opt)
 
         # ----------------------------Training Process--------------------------------
         Neggrad(model_dic=model_dic, unlearing_loader=unlearn_dl, device=device, opt=opt)
+
+        print(forget_train2==forget_train,len(forget_train))
+        # ----------------------------Eva--------------------------------
+        Evaluation(model_dic, retain_train, retain_val, forget_train, forget_val, opt, device)
+    elif method == 'retrain':
+        model_dic = basic_model_loader(opt, device)
+        # ------------------------------dataloader--------------------------------------------------
+        unlearn_dl = set_basic_loader(retain_train, opt)
+
+        # ----------------------------Training Process--------------------------------
+        Retrain(model_dic=model_dic, unlearing_loader=unlearn_dl, device=device, opt=opt)
 
         # ----------------------------Eva--------------------------------
         Evaluation(model_dic, retain_train, retain_val, forget_train, forget_val, opt, device)

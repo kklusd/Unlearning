@@ -78,13 +78,32 @@ def Evaluation(model_dic,retain_train,retain_val,forget_train,forget_val,opt,dev
         print('AccDf:{}'.format(100-Eva_Df_after['Acc']))
         print('AccDt:{}'.format(Eva_Dt_after['Acc']))
         print(Eva_Df_before['Acc'],Eva_Df_after['Acc'] , Eva_Dr_after['Acc'] ,Eva_Dr_before['Acc'])
-
         print('Geo_metric:{}'.format((Eva_Df_before['Acc']-Eva_Df_after['Acc'])*(Eva_Dr_after['Acc']-Eva_Dr_before['Acc'])))
-
-
-        # ------------------other metrics----------------------
         m1 = MIA(rt=retain_train, rv=retain_val, test=forget_train, model=model,method = opt.method)
         print(m1)
+
+    if opt.method == 'retrain':
+        model = model_dic['raw_model']
+        competemodel = model_dic['compete_model']
+
+        print('Before unlearning forget')
+        Eva_Dr_before = evaluate(competemodel, retain_train_dl,device)
+        Eva_Df_before = evaluate(competemodel, forget_train_dl,device)
+        print(Eva_Df_before)
+        print('After unlearning epoch {} forget'.format(opt.epoches))
+        Eva_Dt_after = evaluate(model, forget_val_dl,device)
+        print(Eva_Dt_after)
+        Eva_Dr_after = evaluate(model, retain_train_dl,device)
+        Eva_Df_after = evaluate(model, forget_train_dl,device)
+
+        print('AccDr:{}'.format(Eva_Dr_after['Acc']))
+        print('AccDf:{}'.format(100-Eva_Df_after['Acc']))
+        print('AccDt:{}'.format(Eva_Dt_after['Acc']))
+        print(Eva_Df_before['Acc'],Eva_Df_after['Acc'] , Eva_Dr_after['Acc'] ,Eva_Dr_before['Acc'])
+        print('Geo_metric:{}'.format((Eva_Df_before['Acc']-Eva_Df_after['Acc'])*(Eva_Dr_after['Acc']-Eva_Dr_before['Acc'])))
+        m1 = MIA(rt=retain_train, rv=retain_val, test=forget_train, model=model,method = opt.method)
+        print(m1)
+
 
 
 def contrast_loss(features, set_labels, batch_size, device, n_views, temperature):

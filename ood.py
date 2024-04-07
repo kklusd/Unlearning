@@ -5,6 +5,8 @@ import datetime
 import time
 import csv
 import os.path as osp
+import dill
+
 import numpy as np
 import warnings
 import importlib
@@ -40,7 +42,7 @@ parser.add_argument('--workers', default=4, type=int,
 parser.add_argument('--batch-size', type=int, default=128)
 parser.add_argument('--lr', type=float, default=0.0001, help="learning rate for model")
 parser.add_argument('--gan_lr', type=float, default=0.0002, help="learning rate for gan")
-parser.add_argument('--max-epoch', type=int, default=1)
+parser.add_argument('--max-epoch', type=int, default=50)
 parser.add_argument('--stepsize', type=int, default=30)
 parser.add_argument('--temp', type=float, default=1.0, help="temp")
 parser.add_argument('--loss', type=str, default='ARPLoss')
@@ -90,8 +92,12 @@ def main():
         print("Currently using CPU")
     # -----------------------------把这里改成cifar10里某些----------------------------
     indexx = set_dataset('cifar10', './SimCLR/datasets', mode='random',
-                forget_classes=0, forget_num=500,require_index=True)
+                forget_classes=0, forget_num=5000,require_index=True)
     dataset = datasets.create(options['dataset'],forget_indexes=indexx, **options)
+    with open('runs/dataset_save_5000.pkl', 'wb') as f:
+        dill.dump(dataset, f)
+    np.save("runs/index_save_5000.npy", indexx)
+
     #out_dataset = datasets.create(options['out_dataset'], **options)
     #trainloader, testloader = dataset.trainloader, dataset.testloader
     #outloader = out_dataset.testloader

@@ -29,7 +29,7 @@ def basic_model_loader(opt, device):
     return model_dic
 
 
-def unlearning_step(model, data_loader, optimizer, device):
+def unlearning_step_neggrad(model, data_loader, optimizer, device):
     losses = []
     for batch in tqdm(data_loader, desc='test', leave=False):
         # for batch in data_loader:
@@ -43,7 +43,19 @@ def unlearning_step(model, data_loader, optimizer, device):
         losses.append(loss.detach().cpu().numpy())
     return np.mean(losses)
 
-
+def learning_step(model, data_loader, optimizer, device):
+    losses = []
+    for batch in tqdm(data_loader, desc='test', leave=False):
+        # for batch in data_loader:
+        x, y = batch
+        x, y = x.to(device), y.to(device)
+        class_logits = model(x)
+        optimizer.zero_grad()
+        loss= torch.nn.functional.cross_entropy(class_logits,y)
+        loss.backward()
+        optimizer.step()
+        losses.append(loss.detach().cpu().numpy())
+    return np.mean(losses)
 def Neggrad(model_dic, unlearing_loader, device, opt):
     epoch = 0
     for i in range(opt.epoches):
@@ -51,10 +63,25 @@ def Neggrad(model_dic, unlearing_loader, device, opt):
         model = model_dic['raw_model']
         optimizer = opt.optimizer
         if optimizer == 'adam':
-            optimizer = torch.optim.Adam(model.parameters(), lr=1)
+            optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
         else:
-            optimizer = torch.optim.SGD(model.parameters(), lr=1, momentum=0.9, weight_decay=5e-4)
+            optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
 
-        loss = unlearning_step(model=model, data_loader=unlearing_loader,
+        loss = unlearning_step_neggrad(model=model, data_loader=unlearing_loader,
+                               optimizer=optimizer, device=device)
+        print("Epoch {} Unlearning Loss {}".format(epoch, loss))
+
+def Retrain(model_dic, unlearing_loader, device,opt):
+    epoch = 0
+    for i in range(opt.epoches):
+        epoch = i + 1
+        model = model_dic['raw_model']
+        optimizer = opt.optimizer
+        if optimizer == 'adam':
+            optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+        else:
+            optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
+
+        loss = learning_step(model=model, data_loader=unlearing_loader,
                                optimizer=optimizer, device=device)
         print("Epoch {} Unlearning Loss {}".format(epoch, loss))
