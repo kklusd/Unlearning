@@ -4,35 +4,36 @@ import torch
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-from utils import save_config_file, accuracy, save_checkpoint, AverageMeter
+from .utils import save_config_file, accuracy, save_checkpoint, AverageMeter
 
 class SupClassifier(object):
     def __init__(self, *args, **kwargs):
+        self.device = torch.device("cuda:0")
         self.args = kwargs['args']
-        self.model = kwargs['model'].to(self.args.device)
+        self.model = kwargs['model'].to()
         self.optimizer = kwargs['optimizer']
         self.scheduler = kwargs['scheduler']
         self.train_loader = kwargs['train_loader']
         self.val_loader = kwargs['val_loader']
         self.writer = SummaryWriter()
-        logging.basicConfig(filename=os.path.join(self.writer.log_dir, 'training.log'), level=logging.DEBUG)
-        self.criterion = torch.nn.CrossEntropyLoss().to(self.args.device)
+        logging.basicConfig(filename=os.path.join(self.writer.log_dir, 'retraining.log'), level=logging.DEBUG)
+        self.criterion = torch.nn.CrossEntropyLoss().to(self.device)
 
     def train(self):
         # save config file
         save_config_file(self.writer.log_dir, self.args)
         best_acc = 0
         n_iter = 0
-        logging.info(f"Start Classifier training for {self.args.epochs} epochs.")
-        logging.info(f"Training with gpu: {self.args.disable_cuda}.")
+        logging.info(f"Start Classifier training for {self.args.epoches} epochs.")
+        #logging.info(f"Training with gpu: {self.args.disable_cuda}.")
 
-        for epoch_counter in range(self.args.epochs):
+        for epoch_counter in range(self.args.epoches):
             self.model.train()
             losses = AverageMeter()
             top1 = AverageMeter()
             for idx, (images, labels) in enumerate(self.train_loader):
-                images = images.to(self.args.device)
-                labels = labels.to(self.args.device)
+                images = images.to(self.device)
+                labels = labels.to(self.device)
                 output = self.model(images)
                 loss = self.criterion(output, labels)
                 bsz = labels.shape[0]
@@ -44,7 +45,7 @@ class SupClassifier(object):
 
                 self.optimizer.step()
 
-                if n_iter % self.args.log_every_n_steps == 0:
+                if n_iter % 5 == 0:
                     self.writer.add_scalar('loss', loss, global_step=n_iter)
                     self.writer.add_scalar('acc/top1', acc1[0], global_step=n_iter)
                     self.writer.add_scalar('acc/top5', acc5[0], global_step=n_iter)
@@ -62,10 +63,9 @@ class SupClassifier(object):
             logging.debug(f"Epoch: {epoch_counter}\tLoss: {losses.avg}\tTop1 accuracy: {top1.avg}")
         logging.info("Training has finished.")
         # save model checkpoints
-        checkpoint_name = 'checkpoint_{:04d}.pth.tar'.format(self.args.epochs)
+        checkpoint_name = 'checkpoint_{:04d}.pth.tar'.format(self.args.epoches)
         save_checkpoint({
-            'epoch': self.args.epochs,
-            'arch': self.args.arch,
+            'epoch': self.args.epoches,
             'state_dict': self.model.state_dict(),
             'optimizer': self.optimizer.state_dict(),
         }, is_best=False, filename=os.path.join(self.writer.log_dir, checkpoint_name))

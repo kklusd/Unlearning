@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 from SimCLR.models.resnet_classifier import ResNetClassifier,ResNetClassifier_retrain
 from torch.utils.data import DataLoader
-
+from SimCLR.SupClassifier import SupClassifier
 from .mu_models import BasicClassifier
 np.random.seed(123)
 from .dataset import UnlearningData, BasicUnlearningData
@@ -75,8 +75,20 @@ def Neggrad(model_dic, unlearing_loader, device, opt):
                                optimizer=optimizer, device=device)
         print("Epoch {} Unlearning Loss {}".format(epoch, loss))
 
-def Retrain(model_dic, unlearing_loader, device,opt):
-    epoch = 0
+def Retrain(model_dic, train_loader,val_loader, device,opt):
+    model = model_dic['raw_model']
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.0003, momentum=0.9, weight_decay=1e-4)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+    with torch.cuda.device("cuda:0"):
+        classifier = SupClassifier(model=model, optimizer=optimizer, scheduler=scheduler, train_loader=train_loader,
+                                   val_loader=val_loader, args=opt)
+        classifier.train()
+
+
+
+
+
+'''
     for i in range(opt.epoches):
         epoch = i + 1
         model = model_dic['raw_model']
@@ -89,3 +101,4 @@ def Retrain(model_dic, unlearing_loader, device,opt):
         loss = learning_step(model=model, data_loader=unlearing_loader,
                                optimizer=optimizer, device=device)
         print("Epoch {} Unlearning Loss {}".format(epoch, loss))
+'''

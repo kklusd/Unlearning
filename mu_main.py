@@ -64,12 +64,17 @@ def main():
         model_dic = basic_model_loader(opt, device)
         # ------------------------------dataloader--------------------------------------------------
         unlearn_dl = set_basic_loader(retain_train, opt)
+        train_loader = torch.utils.data.DataLoader(retain_train, batch_size=opt.batch_size, shuffle=True,
+                                                   num_workers=opt.num_worker, pin_memory=True, sampler=None)
+        val_loader = torch.utils.data.DataLoader(retain_val, batch_size=100, shuffle=False, num_workers=2,
+                                                 pin_memory=True)
 
         # ----------------------------Training Process--------------------------------
-        Retrain(model_dic=model_dic, unlearing_loader=unlearn_dl, device=device, opt=opt)
+        Retrain(model_dic=model_dic, train_loader=train_loader,val_loader = val_loader, device=device, opt=opt)
 
         # ----------------------------Eva--------------------------------
         Evaluation(model_dic, retain_train, retain_val, forget_train, forget_val, opt, device)
+
     elif method == 'scrub':
         model_dic = scrub_model_loader(opt, device)
         student = model_dic['student']

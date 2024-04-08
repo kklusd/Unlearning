@@ -3,7 +3,7 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader
 from .mu_metrics import MIA
 import numpy as np
-
+import pandas as pd
 def accuracy(outputs, labels):
     _, preds = torch.max(outputs, dim=1)
     return torch.tensor(torch.sum(preds==labels).item() / len(preds)) * 100  #100
@@ -102,7 +102,8 @@ def Evaluation(model_dic,retain_train,retain_val,forget_train,forget_val,opt,dev
         print('Geo_metric:{}'.format((Eva_Df_before['Acc']-Eva_Df_after['Acc'])*(Eva_Dr_after['Acc']-Eva_Dr_before['Acc'])))
         m1 = MIA(rt=retain_train, rv=retain_val, test=forget_train, model=model,method = opt.method)
         print(m1)
-
+        data = {'AccDr:{}':Eva_Dr_after['Acc'],'AccDf:{}':100-Eva_Df_after['Acc'],'AccDt:{}':Eva_Dt_after['Acc'],"MIA":m1}
+        np.save('mu/saved_data/retrain_5000.npy', data)
 
 
 def contrast_loss(features, set_labels, batch_size, device, n_views, temperature):

@@ -43,7 +43,7 @@ def model_init(args, device):
     new_discriminator.apply(weights_init)
     return new_generator, new_discriminator
 
-def t_sne_visial(real_features, gen_features):
+def t_sne_visial2(real_features, gen_features):
     real_fea_len = real_features.shape[0]
     gen_fea_len = gen_features.shape[0]
     features = np.concatenate([real_features, gen_features], axis=0)
@@ -57,7 +57,30 @@ def t_sne_visial(real_features, gen_features):
     colors = ['b', 'c']
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.scatter(tsne_x[0:real_fea_len], tsne_y[0:real_fea_len], c=colors[0], label='real')
-    ax.scatter(tsne_x[real_fea_len:], tsne_y[real_fea_len:], c=colors[1], label='generate')
+    ax.scatter(tsne_x[0:real_fea_len], tsne_y[0:real_fea_len], c=colors[0], label='real',s=2)
+    ax.scatter(tsne_x[real_fea_len:], tsne_y[real_fea_len:], c=colors[1], label='generate',s=1)
+    ax.legend(loc='best')
+    plt.savefig("tsne.png")
+
+
+def t_sne_visial(retain_features,forget_features, gen_features):
+    retain_fea_len = retain_features.shape[0]
+    forget_fea_len = forget_features.shape[0]
+    gen_fea_len = gen_features.shape[0]
+    features = np.concatenate([retain_features,forget_features, gen_features], axis=0)
+    tsne_result = TSNE(n_components=3).fit_transform(features)
+    def scale_to_01_range(x):
+        value_range = (np.max(x) - np.min(x))
+        starts_from_zero = x - np.min(x)
+        return starts_from_zero / value_range
+    tsne_x = scale_to_01_range(tsne_result[:,0])
+    tsne_y = scale_to_01_range(tsne_result[:,1])
+    colors = ['b', 'c','r']
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.scatter(tsne_x[0:retain_fea_len], tsne_y[0:retain_fea_len], c=colors[0], label='retain',s=4)
+    ax.scatter(tsne_x[retain_fea_len:retain_fea_len+forget_fea_len], tsne_y[retain_fea_len:retain_fea_len+forget_fea_len], c=colors[1], label='forget',s=2)
+    ax.scatter(tsne_x[retain_fea_len+forget_fea_len:], tsne_y[retain_fea_len+forget_fea_len:], c=colors[2], label='generate',s=1)
+
     ax.legend(loc='best')
     plt.savefig("tsne.png")
