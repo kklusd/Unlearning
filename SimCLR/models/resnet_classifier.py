@@ -8,20 +8,23 @@ class ResNetClassifier(nn.Module):
         self.num_class = num_class
         self.resnet_dict = {"resnet18": models.resnet18(weights=weights),
                             "resnet50": models.resnet50(weights=weights)}
-        self.base_model = self._get_basemodel(base_model)
-    
+        self.base_model, self.fc = self._get_basemodel(base_model)
+        
     def _get_basemodel(self, model_name):
         try:
             model = self.resnet_dict[model_name]
             fc_features = model.fc.in_features
-            model.fc = nn.Linear(fc_features, self.num_class)
+            model.fc = nn.Sequential([])
+            fc = nn.Linear(fc_features, self.num_class)
         except KeyError:
             raise InvalidBackboneError(
                 "Invalid backbone architecture. Check the config file and pass one of: resnet18 or resnet50")
         else:
-            return model
+            return model, fc
         
     def forward(self, x):
-        return self.base_model(x)
+        features = self.base_model(x)
+        logits = self.fc(features)
+        return logits
 
 

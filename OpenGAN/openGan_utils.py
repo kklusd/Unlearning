@@ -5,6 +5,8 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 import numpy as np
+import copy
+from torch.nn import functional as F
 
 def weights_init(m):
     classname = m.__class__.__name__
@@ -34,7 +36,24 @@ class FeaturesSet(Dataset):
             x = self.retain_features[index - self.forget_set_len]
             y = 0
             return x, y
-        
+
+def feature_generate(features, y, device):
+    print(features.shape)
+    augment_features = copy.deepcopy(features)
+    trained_generator = Generator(nz=256, ngf=64, nc=512)
+    trained_generator.to(device)
+    check_point = torch.load('OpenGAN/OpenGAN_runs/epoch-300.GNet', map_location=device)
+    trained_generator.load_state_dict(check_point)
+    trained_generator.eval()
+    for i in range(y.shape[0]):
+        if y[i] == 1:
+            noise = torch.randn(100, 256, 1, 1).to(device)
+            fake = trained_generator(noise).detach().squeeze(-1).squeeze(-1)
+            similarity_vec = torch.matmul(F.normalize(augment_features[i]), F.normalize(fake).T)
+            fake_feature = fake[torch.argmin(similarity_vec)]
+            augment_features[i] = fake_feature
+    return augment_features
+
     
 def model_init(args, device):
     new_generator = Generator(nz=args.noise_size, ngf=args.ngf, nc=args.ots_size).to(device)

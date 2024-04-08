@@ -3,6 +3,7 @@ from torchvision import transforms, datasets
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
 import numpy as np
+import torch.nn as nn
 from .dataset import UnlearningData, ContrastiveUnlearningData
 from tqdm import tqdm
 from SimCLR.models.resnet_classifier import ResNetClassifier
@@ -11,6 +12,7 @@ from .mu_models import Student
 import torchvision.models as models
 import copy
 from .mu_utils import simple_contrast_loss, contrast_loss
+from OpenGAN.openGan_utils import feature_generate
 
 np.random.seed(123)
 
@@ -94,13 +96,16 @@ def set_dataset(data_name, root, mode='classwise', forget_classes=0, forget_num=
     else:
         raise ValueError(mode)
 
-def UnlearnLoss(class_logits, loss_contrast, labels, compete_teacher_logits, unlearn_teacher_logits, KL_temperature,loss_weight):
+def UnlearnLoss(class_logits, loss_contrast, labels, compete_teacher_logits, unlearn_teacher_logits, KL_temperature, loss_weight, augment_logits=None):
     labels = torch.unsqueeze(labels, dim=1)
     f_teacher_out = F.softmax(compete_teacher_logits / KL_temperature, dim=1)
     u_teacher_out = F.softmax(unlearn_teacher_logits / KL_temperature, dim=1)
     overall_teacher_out = labels * u_teacher_out + (1-labels)*f_teacher_out
     student_class = F.log_softmax(class_logits / KL_temperature, dim=1)
     kl_loss = F.kl_div(student_class, overall_teacher_out,reduction = 'batchmean')
+    if augment_logits is not None:
+        augment_out = F.softmax(augment_logits / KL_temperature, dim=1)
+        kl_loss += F.kl_div(student_class, labels * augment_out) * (labels.shape[0] / torch.count_nonzero(labels))
     final_loss = loss_weight*loss_contrast + 1*kl_loss
     return final_loss
 
@@ -108,16 +113,9 @@ def bad_te_model_loader(opt, device):
     num_class = opt.num_class
     out_dim = opt.out_dim
     base_model = opt.base_model
-    if base_model == 'resnet18':
-        unlearn_teacher = models.resnet18(num_classes = num_class,  weights = None)
-        unlearn_teacher.to(device)
-        unlearn_teacher.eval()
-    elif base_model == 'resnet50':
-        unlearn_teacher = models.resnet18(num_classes = num_class, weights = None)
-        unlearn_teacher.to(device)
-        unlearn_teacher.eval()
-    else:
-        raise ValueError(base_model)
+    unlearn_teacher = ResNetClassifier(num_classes = num_class,  base_model=base_model)
+    unlearn_teacher.to(device)
+    unlearn_teacher.eval()
     compete_teacher = ResNetClassifier(num_class=num_class, base_model=base_model)
     checkpoint_te = torch.load(opt.teacher_path, map_location=device)
     compete_teacher.load_state_dict(checkpoint_te['state_dict'])
@@ -151,8 +149,10 @@ def bad_te_model_loader(opt, device):
         model_dic['simclr'] = simCLR
     return model_dic
 
-def unlearning_step(model, model_dic, data_loader, optimizer, device, KL_temperature, loss_weight, supervised_mode):
+def unlearning_step(model, model_dic, data_loader, optimizer, device, KL_temperature, opt):
     losses = []
+    supervised_mode = opt.supervised_mode
+    loss_weight = opt.loss_weight
     for batch in tqdm(data_loader, desc='training',leave=False):
         x, y = batch
         if supervised_mode == "original":
@@ -162,9 +162,19 @@ def unlearning_step(model, model_dic, data_loader, optimizer, device, KL_tempera
             batch_size = int(x.shape[0])
         x, y = x.to(device), y.to(device)
         class_logits, student_sim_feature = model(x)
+        augment_logits = None
         with torch.no_grad():
-            compete_teacher_logits = model_dic['compete_teacher'](x)
-            unlearn_teacher_logits = model_dic['unlearning_teacher'](x)
+            features, compete_teacher_logits = model_dic['compete_teacher'](x)
+            if opt.data_augment == 'opengan':
+                augment_features = feature_generate(features.detach(), y, device)
+                in_feature = model_dic['unlearning_teacher'].fc.in_features
+                linear = nn.Linear(in_feature, opt.num_class)
+                linear.to(device)
+                linear.weight.data = model_dic['unlearning_teacher'].fc.weight.data.clone()
+                linear.bias.data = model_dic['unlearning_teacher'].fc.bias.data.clone()
+                with torch.no_grad:
+                    augment_logits = linear(augment_features)
+            _, unlearn_teacher_logits = model_dic['unlearning_teacher'](x)
             if supervised_mode == "simple":
                 sim_features = model_dic['simclr'](x)
                 loss_contrast = simple_contrast_loss(student_sim_feature, sim_features, y)
@@ -176,7 +186,7 @@ def unlearning_step(model, model_dic, data_loader, optimizer, device, KL_tempera
         loss = UnlearnLoss(class_logits[0:batch_size, :], loss_contrast, labels=y,
                            compete_teacher_logits=compete_teacher_logits[0:batch_size, :], 
                            unlearn_teacher_logits=unlearn_teacher_logits[0:batch_size, :], 
-                           KL_temperature=KL_temperature,loss_weight = loss_weight)
+                           KL_temperature=KL_temperature, loss_weight=loss_weight, augment_logits=augment_logits)
         loss.backward()
         optimizer.step()
         losses.append(loss.detach().cpu().numpy())
@@ -192,6 +202,5 @@ def bad_teaching(model_dic, unlearing_loader, epoch, device,  opt):
         optimizer = torch.optim.SGD(student.parameters(), lr = opt.lr, momentum = 0.9, weight_decay = 5e-4)
 
     loss = unlearning_step(model=student, model_dic=model_dic, data_loader=unlearing_loader,
-                            optimizer=optimizer, device=device, KL_temperature=1,
-                            loss_weight = opt.loss_weight, supervised_mode=opt.supervised_mode)
+                            optimizer=optimizer, device=device, KL_temperature=1, opt)
     print("Epoch {} Unlearning Loss {}".format(epoch, loss))

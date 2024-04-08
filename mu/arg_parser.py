@@ -23,5 +23,7 @@ def parse_option():
     parser.add_argument('--loss_weight', type=float, default = 0.5, help='control the clr loss weight')
     parser.add_argument('--supervised_mode', type=str, default="simple", help='simple: direct feature compare; original:augment image and then contrast learning ')
     parser.add_argument('--saved_data_path', type=str, default='', help='saved instance-wise unlearning data')
+    parser.add_argument('--data_augment', type=str, default='None', help='method to augment forget dataset')
+    parser.add_argument('--augment_num', type=int, default=500, help='augment data amount')
     opt = parser.parse_args()
     return opt

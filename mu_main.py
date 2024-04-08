@@ -7,7 +7,7 @@ from mu.Scrub import scrub, scrub_model_loader
 from mu.mu_basic import Neggrad,basic_model_loader,set_basic_loader,Retrain
 import os
 import pickle
-from mu.mu_data import aug
+from mu.mu_data import alpr_aug, simple_aug
 import copy
 def main():
     opt = parser.parse_option()
@@ -30,12 +30,13 @@ def main():
     forget_val = forget_set['val']
     retain_train = retain_set['train']
     retain_val = retain_set['val']
-
+    if opt.data_augment == 'alpr':
+        forget_train = alpr_aug(forget_train, opt.augment_num)
+    elif opt.data_augment == 'simple':
+        forget_train = simple_aug(forget_train, opt.augment_num)
 #---------------------------------method-------------------------------------------
     if method == 'bad_teaching':
         model_dic = bad_te_model_loader(opt, device)
-        student = model_dic['student']
-
         # ------------------------------dataloader--------------------------------------------------
         unlearn_dl = set_loader(retain_train, forget_train, opt)
 
@@ -45,21 +46,18 @@ def main():
             bad_teaching(model_dic=model_dic, unlearing_loader=unlearn_dl, epoch=epoch, device=device, opt=opt)
 
         # ----------------------------Eva--------------------------------
-        Evaluation(model_dic,retain_train, retain_val,forget_train, forget_val,opt,device)
+        Evaluation(model_dic,retain_train, retain_val,forget_set['train'], forget_val,opt,device)
     elif method == 'neggrad':
-        if True:
-            forget_train2 = copy.deepcopy(forget_train)
-            forget_train2 = aug(forget_train2)
         model_dic = basic_model_loader(opt, device)
         # ------------------------------dataloader--------------------------------------------------
-        unlearn_dl = set_basic_loader(forget_train2, opt)
+        unlearn_dl = set_basic_loader(forget_train, opt)
 
         # ----------------------------Training Process--------------------------------
         Neggrad(model_dic=model_dic, unlearing_loader=unlearn_dl, device=device, opt=opt)
 
-        print(forget_train2==forget_train,len(forget_train))
+        print(forget_train==forget_set['train'],len(forget_train))
         # ----------------------------Eva--------------------------------
-        Evaluation(model_dic, retain_train, retain_val, forget_train, forget_val, opt, device)
+        Evaluation(model_dic, retain_train, retain_val, forget_set['train'], forget_val, opt, device)
     elif method == 'retrain':
         model_dic = basic_model_loader(opt, device)
         # ------------------------------dataloader--------------------------------------------------
@@ -73,18 +71,17 @@ def main():
         Retrain(model_dic=model_dic, train_loader=train_loader,val_loader = val_loader, device=device, opt=opt)
 
         # ----------------------------Eva--------------------------------
-        Evaluation(model_dic, retain_train, retain_val, forget_train, forget_val, opt, device)
+        Evaluation(model_dic, retain_train, retain_val, forget_set['train'], forget_val, opt, device)
 
     elif method == 'scrub':
         model_dic = scrub_model_loader(opt, device)
-        student = model_dic['student']
         forget_set, retain_set = set_dataset(opt.data_name, opt.data_root, mode=opt.mode,
                                              forget_classes=opt.forget_class, forget_num=opt.forget_num)
         unlearn_dl = set_loader(retain_train, forget_train, opt)
         for i in range(epoches):
             epoch = i+1
             scrub(model_dic=model_dic, unlearing_loader=unlearn_dl, epoch=epoch, device=device, opt=opt)
-        Evaluation(model_dic,retain_train, retain_val,forget_train, forget_val,opt,device)
+        Evaluation(model_dic,retain_train, retain_val,forget_set['train'], forget_val,opt,device)
 
 if __name__ == '__main__':
     main()

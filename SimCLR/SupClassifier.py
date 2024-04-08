@@ -34,7 +34,7 @@ class SupClassifier(object):
             for idx, (images, labels) in enumerate(self.train_loader):
                 images = images.to(self.device)
                 labels = labels.to(self.device)
-                output = self.model(images)
+                _,output = self.model(images)
                 loss = self.criterion(output, labels)
                 bsz = labels.shape[0]
                 losses.update(loss.item(), bsz)
@@ -81,7 +81,7 @@ class SupClassifier(object):
                 images = images.float().cuda()
                 labels = labels.cuda()
                 bsz = labels.shape[0]
-                output = self.model(images)
+                _, output = self.model(images)
                 loss = self.criterion(output, labels)
                 acc1, acc5 = accuracy(output, labels)
                 top1.update(acc1[0], bsz)

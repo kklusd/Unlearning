@@ -1,11 +1,13 @@
 import torch
 from torch.nn import functional as F
 import numpy as np
+import torch.nn as nn
 from SimCLR.models.resnet_classifier import ResNetClassifier
 from SimCLR.models.resnet_simclr import ResNetSimCLR
 from .mu_models import Student
 import copy
 from .mu_utils import simple_contrast_loss, contrast_loss
+from OpenGAN.openGan_utils import feature_generate
 
     
 # forget set 最大化老师和学生差距，retain set最小化 loss写在一起。 Cross entropy term = 0
@@ -48,30 +50,45 @@ def scrub_model_loader(opt, device):
 
 
 def UnlearnLoss_scrub(class_logits, loss_contrast, labels,
-                        compete_teacher_logits, KL_temperature, loss_weight):
+                        compete_teacher_logits, KL_temperature, loss_weight, augment_logits=None):
     labels = torch.unsqueeze(labels, dim=1)
     labels = labels.repeat(2, 1)
     teacher_out = F.softmax(compete_teacher_logits / KL_temperature, dim=1)
     student_class = F.log_softmax(class_logits / KL_temperature, dim=1)
     
-    kl_loss_forget = F.kl_div(student_class, labels*teacher_out,reduction = 'batchmean') 
-    kl_loss_retain = F.kl_div(student_class, (1-labels) * teacher_out,reduction = 'batchmean')
+    kl_loss_forget = F.kl_div(student_class, labels*teacher_out,reduction = 'batchmean') * (labels.shape[0] / torch.count_nonzero(labels))
+    if augment_logits is not None:
+        augment_out = F.softmax(augment_logits / KL_temperature, dim=1)
+        kl_loss_forget += F.kl_div(student_class, labels * augment_out)* (labels.shape[0] / torch.count_nonzero(labels))
+    kl_loss_retain = F.kl_div(student_class, (1-labels) * teacher_out,reduction = 'batchmean')* (labels.shape[0] / (labels.shape[0]-torch.count_nonzero(labels)))
 
     total_loss = kl_loss_retain - kl_loss_forget
 
     return total_loss + loss_weight*loss_contrast
 
 
-def unlearning_step_scrub(model, model_dic, data_loader, optimizer, device, KL_temperature, loss_weight, supervised_mode):
+def unlearning_step_scrub(model, model_dic, data_loader, optimizer, device, KL_temperature, opt):
     losses = []
+    loss_weight = opt.loss_weight
+    supervised_mode = opt.supervised
     for batch in data_loader:
         x, y = batch
         if supervised_mode == "original":
             x = torch.cat(x, dim=0)
         x, y = x.to(device), y.to(device)
         class_logits, student_sim_feature = model(x)
+        augment_logits = None
         with torch.no_grad():
-            compete_teacher_logits = model_dic['compete_teacher'](x)
+            features, compete_teacher_logits = model_dic['compete_teacher'](x)
+            if opt.data_augment == 'opengan':
+                augment_features = feature_generate(features.detach(), y, device)
+                in_feature = model_dic['compete_teacher'].fc.in_features
+                linear = nn.Linear(in_feature, opt.num_class)
+                linear.to(device)
+                linear.weight.data = model_dic['compete_teacher'].fc.weight.data.clone()
+                linear.bias.data = model_dic['compete_teacher'].fc.bias.data.clone()
+                with torch.no_grad:
+                    augment_logits = linear(augment_features)
             if supervised_mode == "simple":
                 sim_features = model_dic['simclr'](x)
                 loss_contrast = simple_contrast_loss(student_sim_feature, sim_features, y)
@@ -83,7 +100,8 @@ def unlearning_step_scrub(model, model_dic, data_loader, optimizer, device, KL_t
         optimizer.zero_grad()
         loss = UnlearnLoss_scrub(class_logits, loss_contrast, labels=y, 
                                 compete_teacher_logits=compete_teacher_logits,
-                                KL_temperature=KL_temperature,loss_weight = loss_weight)
+                                KL_temperature=KL_temperature,loss_weight = loss_weight,
+                                augment_logits=augment_logits)
         loss.backward()
         optimizer.step()
         losses.append(loss.detach().cpu().numpy())
@@ -105,6 +123,6 @@ def scrub(model_dic, unlearing_loader, epoch, device,  opt):
 
     loss = unlearning_step_scrub(model=student, compete_teacher=compete_teacher, 
                                 simclr=simclr, data_loader=unlearing_loader,
-                                optimizer=optimizer, device=device, KL_temperature=1, loss_weight=opt.loss_weight)
+                                optimizer=optimizer, device=device, KL_temperature=1, opt)
     
     print("Epoch {} Unlearning Loss {}".format(epoch, loss))
