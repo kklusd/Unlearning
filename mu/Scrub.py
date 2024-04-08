@@ -52,14 +52,13 @@ def scrub_model_loader(opt, device):
 def UnlearnLoss_scrub(class_logits, loss_contrast, labels,
                         compete_teacher_logits, KL_temperature, loss_weight, augment_logits=None):
     labels = torch.unsqueeze(labels, dim=1)
-    labels = labels.repeat(2, 1)
     teacher_out = F.softmax(compete_teacher_logits / KL_temperature, dim=1)
     student_class = F.log_softmax(class_logits / KL_temperature, dim=1)
     
     kl_loss_forget = F.kl_div(student_class, labels*teacher_out,reduction = 'batchmean') * (labels.shape[0] / torch.count_nonzero(labels))
     if augment_logits is not None:
         augment_out = F.softmax(augment_logits / KL_temperature, dim=1)
-        kl_loss_forget += F.kl_div(student_class, labels * augment_out)* (labels.shape[0] / torch.count_nonzero(labels))
+        kl_loss_forget += F.kl_div(student_class, labels * augment_out, reduction='batchmean')* (labels.shape[0] / torch.count_nonzero(labels))
     kl_loss_retain = F.kl_div(student_class, (1-labels) * teacher_out,reduction = 'batchmean')* (labels.shape[0] / (labels.shape[0]-torch.count_nonzero(labels)))
 
     total_loss = kl_loss_retain - kl_loss_forget
@@ -70,8 +69,8 @@ def UnlearnLoss_scrub(class_logits, loss_contrast, labels,
 def unlearning_step_scrub(model, model_dic, data_loader, optimizer, device, KL_temperature, opt):
     losses = []
     loss_weight = opt.loss_weight
-    supervised_mode = opt.supervised
-    for batch in data_loader:
+    supervised_mode = opt.supervised_mode
+    for batch in tqdm(data_loader, desc='training',leave=False):
         x, y = batch
         if supervised_mode == "original":
             x = torch.cat(x, dim=0)
@@ -79,16 +78,16 @@ def unlearning_step_scrub(model, model_dic, data_loader, optimizer, device, KL_t
         class_logits, student_sim_feature = model(x)
         augment_logits = None
         with torch.no_grad():
-            features, compete_teacher_logits = model_dic['compete_teacher'](x)
+            compete_teacher_logits, features = model_dic['compete_teacher'](x)
             if opt.data_augment == 'opengan':
                 augment_features = feature_generate(features.detach(), y, device)
                 in_feature = model_dic['compete_teacher'].fc.in_features
                 linear = nn.Linear(in_feature, opt.num_class)
                 linear.to(device)
+                linear.eval()
                 linear.weight.data = model_dic['compete_teacher'].fc.weight.data.clone()
                 linear.bias.data = model_dic['compete_teacher'].fc.bias.data.clone()
-                with torch.no_grad:
-                    augment_logits = linear(augment_features)
+                augment_logits = linear(augment_features)
             if supervised_mode == "simple":
                 sim_features = model_dic['simclr'](x)
                 loss_contrast = simple_contrast_loss(student_sim_feature, sim_features, y)
@@ -121,8 +120,7 @@ def scrub(model_dic, unlearing_loader, epoch, device,  opt):
     else:
         optimizer = torch.optim.SGD(student.parameters(), lr = opt.lr, momentum = 0.9, weight_decay = 5e-4)
 
-    loss = unlearning_step_scrub(model=student, compete_teacher=compete_teacher, 
-                                simclr=simclr, data_loader=unlearing_loader,
-                                optimizer=optimizer, device=device, KL_temperature=1, opt)
+    loss = unlearning_step_scrub(model=student, model_dic=model_dic, data_loader=unlearing_loader,
+                                optimizer=optimizer, device=device, KL_temperature=1, opt=opt)
     
     print("Epoch {} Unlearning Loss {}".format(epoch, loss))

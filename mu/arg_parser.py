@@ -3,7 +3,7 @@ import argparse
 def parse_option():
     parser = argparse.ArgumentParser('argument for unlearning')
     parser.add_argument('--base_model', type=str, default='resnet18', help='basic model for classification')
-    parser.add_argument('--teacher_path', type=str, default='./SimCLR/runs/original_model/checkpoint_0200.pth.tar',
+    parser.add_argument('--teacher_path', type=str, default='./SimCLR/runs/original_model/checkpoint_0150.pth.tar',
                         help='teacher model path')
     parser.add_argument('--num_class', type=int, default=10, help='number of classes in dataset')
     parser.add_argument('--sim_path', type=str, default='./SimCLR/runs/sim_model/checkpoint_0200.pth.tar',
@@ -19,7 +19,7 @@ def parse_option():
     parser.add_argument('--batch_size', type=int, default=256, help='batch size for unlearing')
     parser.add_argument('--num_worker', type=int, default=6, help='number of workers for dataloader')
     parser.add_argument('--data_name', type=str, default='cifar10', help='dataset name')
-    parser.add_argument('-data_root', type=str, default='./SimCLR/datasets', help='root of dataset')
+    parser.add_argument('--data_root', type=str, default='./SimCLR/datasets', help='root of dataset')
     parser.add_argument('--loss_weight', type=float, default = 0.5, help='control the clr loss weight')
     parser.add_argument('--supervised_mode', type=str, default="simple", help='simple: direct feature compare; original:augment image and then contrast learning ')
     parser.add_argument('--saved_data_path', type=str, default='', help='saved instance-wise unlearning data')

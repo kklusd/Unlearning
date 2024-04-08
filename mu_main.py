@@ -26,11 +26,11 @@ def main():
     else:
         forget_set, retain_set = set_dataset(opt.data_name, opt.data_root, mode=opt.mode,
                                             forget_classes=opt.forget_class, forget_num=opt.forget_num)
-    forget_train = forget_set['train']
+    forget_train = copy.deepcopy(forget_set['train'])
     forget_val = forget_set['val']
     retain_train = retain_set['train']
     retain_val = retain_set['val']
-    if opt.data_augment == 'alpr':
+    if opt.data_augment == 'arpl':
         forget_train = alpr_aug(forget_train, opt.augment_num)
     elif opt.data_augment == 'simple':
         forget_train = simple_aug(forget_train, opt.augment_num)

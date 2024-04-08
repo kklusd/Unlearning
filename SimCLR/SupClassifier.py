@@ -4,7 +4,7 @@ import torch
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-from utils import save_config_file, accuracy, save_checkpoint, AverageMeter
+from .utils import save_config_file, accuracy, save_checkpoint, AverageMeter
 
 class SupClassifier(object):
     def __init__(self, *args, **kwargs):
@@ -34,7 +34,7 @@ class SupClassifier(object):
             for idx, (images, labels) in enumerate(self.train_loader):
                 images = images.to(self.device)
                 labels = labels.to(self.device)
-                _,output = self.model(images)
+                output, _ = self.model(images)
                 loss = self.criterion(output, labels)
                 bsz = labels.shape[0]
                 losses.update(loss.item(), bsz)
@@ -81,7 +81,7 @@ class SupClassifier(object):
                 images = images.float().cuda()
                 labels = labels.cuda()
                 bsz = labels.shape[0]
-                _, output = self.model(images)
+                output, _ = self.model(images)
                 loss = self.criterion(output, labels)
                 acc1, acc5 = accuracy(output, labels)
                 top1.update(acc1[0], bsz)

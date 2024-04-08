@@ -27,7 +27,7 @@ parser.add_argument('--data_path', type=str, default='',
                     help='saved dataset for instance_wise unlearning')
 parser.add_argument('--forget_num', type=int, default=5000, help='number of forget data')
 parser.add_argument('--base_model', type=str, default='resnet18', help='base model for feature generator')
-parser.add_argument('--state_dict_path', type=str, default='./SimCLR/runs/original_model/checkpoint_0200.pth.tar',
+parser.add_argument('--state_dict_path', type=str, default='./SimCLR/runs/original_model/checkpoint_0150.pth.tar',
                     help='feature generator model checkpoint path')
 parser.add_argument('--save_dir', type=str, default='OpenGAN/OpenGAN_runs', help='Dirictory of model save')
 
@@ -98,7 +98,6 @@ def main():
             batch_size =features.shape[0]
             out_put = netD(features).view(-1)
             D_x_close = ((y * out_put).sum() / forget_num).item()
-            D_x_open = (((1-y) * out_put).sum() / retain_num).item()
             err_D_real = criterion(out_put, y)
             err_D_real.backward()
             noise = torch.randn(batch_size, args.noise_size, 1, 1).to(device)
@@ -118,9 +117,9 @@ def main():
             err_G.backward()
             optimizer_G.step()
             if iter % 10 == 0:
-                print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x_close): %.4f\tD(x_open): %.4f\tD(G(z)): %.4f / %.4f'
+                print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x_close): %.4f\tD(G(z)): %.4f / %.4f'
                     % (epoch, args.epoches, iter, len(feature_loader),
-                        err_D.item(), err_G.item(), D_x_close, D_x_open, D_G_z1, D_G_z2))
+                        err_D.item(), err_G.item(), D_x_close, D_G_z1, D_G_z2))
     cur_model_wts = copy.deepcopy(netG.state_dict())
     path_to_save_paramOnly = os.path.join(args.save_dir, 'epoch-{}.GNet'.format(epoch+1))
     torch.save(cur_model_wts, path_to_save_paramOnly)

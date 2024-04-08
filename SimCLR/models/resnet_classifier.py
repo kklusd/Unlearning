@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torchvision.models as models
-from exceptions.exceptions import InvalidBackboneError
+from ..exceptions.exceptions import InvalidBackboneError
 
 class ResNetClassifier(nn.Module):
     def __init__(self, base_model, num_class, weights=None):
@@ -14,7 +14,7 @@ class ResNetClassifier(nn.Module):
         try:
             model = self.resnet_dict[model_name]
             fc_features = model.fc.in_features
-            model.fc = nn.Sequential([])
+            model.fc = nn.Sequential()
             fc = nn.Linear(fc_features, self.num_class)
         except KeyError:
             raise InvalidBackboneError(
@@ -25,6 +25,6 @@ class ResNetClassifier(nn.Module):
     def forward(self, x):
         features = self.base_model(x)
         logits = self.fc(features)
-        return logits
+        return logits, features
 
 

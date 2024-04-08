@@ -38,7 +38,6 @@ class FeaturesSet(Dataset):
             return x, y
 
 def feature_generate(features, y, device):
-    print(features.shape)
     augment_features = copy.deepcopy(features)
     trained_generator = Generator(nz=256, ngf=64, nc=512)
     trained_generator.to(device)
@@ -49,8 +48,8 @@ def feature_generate(features, y, device):
         if y[i] == 1:
             noise = torch.randn(100, 256, 1, 1).to(device)
             fake = trained_generator(noise).detach().squeeze(-1).squeeze(-1)
-            similarity_vec = torch.matmul(F.normalize(augment_features[i]), F.normalize(fake).T)
-            fake_feature = fake[torch.argmin(similarity_vec)]
+            similarity_vec = torch.matmul(F.normalize(augment_features[i].unsqueeze(0)), F.normalize(fake).T)
+            fake_feature = fake[torch.argmax(similarity_vec)]
             augment_features[i] = fake_feature
     return augment_features
 

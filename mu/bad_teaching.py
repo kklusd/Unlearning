@@ -105,7 +105,7 @@ def UnlearnLoss(class_logits, loss_contrast, labels, compete_teacher_logits, unl
     kl_loss = F.kl_div(student_class, overall_teacher_out,reduction = 'batchmean')
     if augment_logits is not None:
         augment_out = F.softmax(augment_logits / KL_temperature, dim=1)
-        kl_loss += F.kl_div(student_class, labels * augment_out) * (labels.shape[0] / torch.count_nonzero(labels))
+        kl_loss += F.kl_div(student_class, labels * augment_out, reduction = 'batchmean') * (labels.shape[0] / torch.count_nonzero(labels))
     final_loss = loss_weight*loss_contrast + 1*kl_loss
     return final_loss
 
@@ -113,7 +113,7 @@ def bad_te_model_loader(opt, device):
     num_class = opt.num_class
     out_dim = opt.out_dim
     base_model = opt.base_model
-    unlearn_teacher = ResNetClassifier(num_classes = num_class,  base_model=base_model)
+    unlearn_teacher = ResNetClassifier(num_class = num_class,  base_model=base_model)
     unlearn_teacher.to(device)
     unlearn_teacher.eval()
     compete_teacher = ResNetClassifier(num_class=num_class, base_model=base_model)
@@ -164,17 +164,17 @@ def unlearning_step(model, model_dic, data_loader, optimizer, device, KL_tempera
         class_logits, student_sim_feature = model(x)
         augment_logits = None
         with torch.no_grad():
-            features, compete_teacher_logits = model_dic['compete_teacher'](x)
+            compete_teacher_logits, features = model_dic['compete_teacher'](x)
             if opt.data_augment == 'opengan':
                 augment_features = feature_generate(features.detach(), y, device)
                 in_feature = model_dic['unlearning_teacher'].fc.in_features
                 linear = nn.Linear(in_feature, opt.num_class)
+                linear.eval()
                 linear.to(device)
                 linear.weight.data = model_dic['unlearning_teacher'].fc.weight.data.clone()
                 linear.bias.data = model_dic['unlearning_teacher'].fc.bias.data.clone()
-                with torch.no_grad:
-                    augment_logits = linear(augment_features)
-            _, unlearn_teacher_logits = model_dic['unlearning_teacher'](x)
+                augment_logits = linear(augment_features)
+            unlearn_teacher_logits, _ = model_dic['unlearning_teacher'](x)
             if supervised_mode == "simple":
                 sim_features = model_dic['simclr'](x)
                 loss_contrast = simple_contrast_loss(student_sim_feature, sim_features, y)
@@ -202,5 +202,5 @@ def bad_teaching(model_dic, unlearing_loader, epoch, device,  opt):
         optimizer = torch.optim.SGD(student.parameters(), lr = opt.lr, momentum = 0.9, weight_decay = 5e-4)
 
     loss = unlearning_step(model=student, model_dic=model_dic, data_loader=unlearing_loader,
-                            optimizer=optimizer, device=device, KL_temperature=1, opt)
+                            optimizer=optimizer, device=device, KL_temperature=1, opt=opt)
     print("Epoch {} Unlearning Loss {}".format(epoch, loss))

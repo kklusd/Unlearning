@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torchvision.models as models
 import torch
-from exceptions.exceptions import InvalidBackboneError
+from ..exceptions.exceptions import InvalidBackboneError
 from collections import OrderedDict
 
 
