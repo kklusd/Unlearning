@@ -1,16 +1,16 @@
 import torch.nn as nn
 import torchvision.models as models
 import torch
-from ..exceptions.exceptions import InvalidBackboneError
+from exceptions.exceptions import InvalidBackboneError
 from collections import OrderedDict
 
 
 class ResNetSimCLR(nn.Module):
 
-    def __init__(self, base_model, out_dim):
+    def __init__(self, base_model, out_dim, weights=None):
         super(ResNetSimCLR, self).__init__()
-        self.resnet_dict = {"resnet18": models.resnet18(weights=None, num_classes=out_dim),
-                            "resnet50": models.resnet50(weights=None, num_classes=out_dim)}
+        self.resnet_dict = {"resnet18": models.resnet18(weights=weights, num_classes=out_dim),
+                            "resnet50": models.resnet50(weights=weights, num_classes=out_dim)}
 
         self.backbone = self._get_basemodel(base_model)
         dim_mlp = self.backbone.fc.in_features

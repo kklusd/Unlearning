@@ -4,13 +4,13 @@ import torch
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-from .utils import save_config_file, accuracy, save_checkpoint, AverageMeter
+from utils import save_config_file, accuracy, save_checkpoint, AverageMeter
 
 class SupClassifier(object):
     def __init__(self, *args, **kwargs):
         self.device = torch.device("cuda:0")
         self.args = kwargs['args']
-        self.model = kwargs['model'].to()
+        self.model = kwargs['model'].to(self.device)
         self.optimizer = kwargs['optimizer']
         self.scheduler = kwargs['scheduler']
         self.train_loader = kwargs['train_loader']
@@ -24,10 +24,10 @@ class SupClassifier(object):
         save_config_file(self.writer.log_dir, self.args)
         best_acc = 0
         n_iter = 0
-        logging.info(f"Start Classifier training for {self.args.epoches} epochs.")
+        logging.info(f"Start Classifier training for {self.args.epochs} epochs.")
         #logging.info(f"Training with gpu: {self.args.disable_cuda}.")
 
-        for epoch_counter in range(self.args.epoches):
+        for epoch_counter in range(self.args.epochs):
             self.model.train()
             losses = AverageMeter()
             top1 = AverageMeter()
@@ -61,11 +61,12 @@ class SupClassifier(object):
             print('best accuracy:{:.2f}'.format(best_acc))
             self.scheduler.step()
             logging.debug(f"Epoch: {epoch_counter}\tLoss: {losses.avg}\tTop1 accuracy: {top1.avg}")
+            logging.debug(f"Epoch:{epoch_counter}\tBest_val_acc:{best_acc}")
         logging.info("Training has finished.")
         # save model checkpoints
-        checkpoint_name = 'checkpoint_{:04d}.pth.tar'.format(self.args.epoches)
+        checkpoint_name = 'checkpoint_{:04d}.pth.tar'.format(self.args.epochs)
         save_checkpoint({
-            'epoch': self.args.epoches,
+            'epoch': self.args.epochs,
             'state_dict': self.model.state_dict(),
             'optimizer': self.optimizer.state_dict(),
         }, is_best=False, filename=os.path.join(self.writer.log_dir, checkpoint_name))
