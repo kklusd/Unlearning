@@ -8,7 +8,7 @@ from .mu_models import Student
 import copy
 from .mu_utils import simple_contrast_loss, contrast_loss
 from OpenGAN.openGan_utils import feature_generate
-
+from tqdm import tqdm
     
 # forget set 最大化老师和学生差距，retain set最小化 loss写在一起。 Cross entropy term = 0
 
@@ -51,19 +51,19 @@ def scrub_model_loader(opt, device):
 
 def UnlearnLoss_scrub(class_logits, loss_contrast, labels,
                         compete_teacher_logits, KL_temperature, loss_weight, augment_logits=None):
+    forget_indexes = torch.nonzero(labels).squeeze().cpu().numpy()
+    retain_indexes = torch.nonzero(1-labels).squeeze().cpu().numpy()
     labels = torch.unsqueeze(labels, dim=1)
     teacher_out = F.softmax(compete_teacher_logits / KL_temperature, dim=1)
     student_class = F.log_softmax(class_logits / KL_temperature, dim=1)
-    
-    kl_loss_forget = F.kl_div(student_class, labels*teacher_out,reduction = 'batchmean') * (labels.shape[0] / torch.count_nonzero(labels))
+    kl_loss_retain = F.kl_div(student_class[retain_indexes], teacher_out[retain_indexes], reduction = 'batchmean')
+    kl_loss_forget = F.kl_div(student_class[forget_indexes], teacher_out[forget_indexes], reduction = 'batchmean')
     if augment_logits is not None:
         augment_out = F.softmax(augment_logits / KL_temperature, dim=1)
-        kl_loss_forget += F.kl_div(student_class, labels * augment_out, reduction='batchmean')* (labels.shape[0] / torch.count_nonzero(labels))
-    kl_loss_retain = F.kl_div(student_class, (1-labels) * teacher_out,reduction = 'batchmean')* (labels.shape[0] / (labels.shape[0]-torch.count_nonzero(labels)))
-
-    total_loss = kl_loss_retain - kl_loss_forget
-
-    return total_loss + loss_weight*loss_contrast
+        kl_loss_retain += F.kl_div(student_class[retain_indexes], augment_out[retain_indexes], reduction = 'batchmean')
+        kl_loss_forget += F.kl_div(student_class[forget_indexes], augment_out[forget_indexes], reduction = 'batchmean')
+    kl_loss = kl_loss_retain * 0.5 - kl_loss_forget * 0.5
+    return kl_loss + loss_weight*loss_contrast
 
 
 def unlearning_step_scrub(model, model_dic, data_loader, optimizer, device, KL_temperature, opt):
@@ -73,7 +73,10 @@ def unlearning_step_scrub(model, model_dic, data_loader, optimizer, device, KL_t
     for batch in tqdm(data_loader, desc='training',leave=False):
         x, y = batch
         if supervised_mode == "original":
+            batch_size = int(x[0].shape[0])
             x = torch.cat(x, dim=0)
+        else:
+            batch_size = int(x.shape[0])
         x, y = x.to(device), y.to(device)
         class_logits, student_sim_feature = model(x)
         augment_logits = None
@@ -92,12 +95,11 @@ def unlearning_step_scrub(model, model_dic, data_loader, optimizer, device, KL_t
                 sim_features = model_dic['simclr'](x)
                 loss_contrast = simple_contrast_loss(student_sim_feature, sim_features, y)
             elif supervised_mode == "original":
-                batch_size = x.shape[0]
                 loss_contrast = contrast_loss(student_sim_feature, y, batch_size, device, n_views=2, temperature=1)
             else:
                 raise ValueError(supervised_mode)
         optimizer.zero_grad()
-        loss = UnlearnLoss_scrub(class_logits, loss_contrast, labels=y, 
+        loss = UnlearnLoss_scrub(class_logits[0:batch_size, :], loss_contrast, labels=y, 
                                 compete_teacher_logits=compete_teacher_logits,
                                 KL_temperature=KL_temperature,loss_weight = loss_weight,
                                 augment_logits=augment_logits)

@@ -75,8 +75,6 @@ def main():
 
     elif method == 'scrub':
         model_dic = scrub_model_loader(opt, device)
-        forget_set, retain_set = set_dataset(opt.data_name, opt.data_root, mode=opt.mode,
-                                             forget_classes=opt.forget_class, forget_num=opt.forget_num)
         unlearn_dl = set_loader(retain_train, forget_train, opt)
         for i in range(epoches):
             epoch = i+1

@@ -105,7 +105,9 @@ def UnlearnLoss(class_logits, loss_contrast, labels, compete_teacher_logits, unl
     kl_loss = F.kl_div(student_class, overall_teacher_out,reduction = 'batchmean')
     if augment_logits is not None:
         augment_out = F.softmax(augment_logits / KL_temperature, dim=1)
-        kl_loss += F.kl_div(student_class, labels * augment_out, reduction = 'batchmean') * (labels.shape[0] / torch.count_nonzero(labels))
+        overall_teacher_out_2 = labels * augment_out + (1-labels)*f_teacher_out
+        kl_loss += F.kl_div(student_class, overall_teacher_out_2, reduction = 'batchmean')
+        kl_loss = kl_loss * 0.5
     final_loss = loss_weight*loss_contrast + 1*kl_loss
     return final_loss
 
