@@ -53,17 +53,26 @@ def UnlearnLoss_scrub(class_logits, loss_contrast, labels,
                         compete_teacher_logits, KL_temperature, loss_weight, augment_logits=None):
     forget_indexes = torch.nonzero(labels).squeeze().cpu().numpy()
     retain_indexes = torch.nonzero(1-labels).squeeze().cpu().numpy()
-    labels = torch.unsqueeze(labels, dim=1)
-    teacher_out = F.softmax(compete_teacher_logits / KL_temperature, dim=1)
-    student_class = F.log_softmax(class_logits / KL_temperature, dim=1)
-    kl_loss_retain = F.kl_div(student_class[retain_indexes], teacher_out[retain_indexes], reduction = 'batchmean')
-    kl_loss_forget = F.kl_div(student_class[forget_indexes], teacher_out[forget_indexes], reduction = 'batchmean')
+    forget_teacher_logits = compete_teacher_logits[forget_indexes]
+    retain_teacher_logits = compete_teacher_logits[retain_indexes]
+    forget_teacher_out = F.softmax(forget_teacher_logits / KL_temperature, dim=1)
+    retain_teacher_out = F.softmax(retain_teacher_logits / KL_temperature, dim=1)
+
+    forget_class_logits = class_logits[forget_indexes]
+    retain_class_logits = class_logits[retain_indexes]
+    forget_student_class = F.log_softmax(forget_class_logits / KL_temperature, dim=1)
+    retain_student_class = F.log_softmax(retain_class_logits / KL_temperature, dim=1)
+    kl_loss_retain = F.kl_div(retain_student_class, retain_teacher_out, reduction = 'batchmean')
+    kl_loss_forget = F.kl_div(forget_student_class, forget_teacher_out, reduction = 'batchmean')
     if augment_logits is not None:
-        augment_out = F.softmax(augment_logits / KL_temperature, dim=1)
-        kl_loss_retain += F.kl_div(student_class[retain_indexes], augment_out[retain_indexes], reduction = 'batchmean')
-        kl_loss_forget += F.kl_div(student_class[forget_indexes], augment_out[forget_indexes], reduction = 'batchmean')
-    kl_loss = kl_loss_retain * 0.5 - kl_loss_forget * 0.5
-    return kl_loss + loss_weight*loss_contrast
+        forget_augment_logits = augment_logits[forget_indexes]
+        retain_augment_logits = augment_logits[retain_indexes]
+        forget_augment_out = F.softmax(forget_augment_logits / KL_temperature, dim=1)
+        retain_augment_out = F.softmax(retain_augment_logits / KL_temperature, dim=1)
+        kl_loss_retain += F.kl_div(retain_student_class, retain_augment_out, reduction = 'batchmean')
+        kl_loss_forget += F.kl_div(forget_student_class, forget_augment_out, reduction = 'batchmean')
+    kl_loss = kl_loss_retain * retain_indexes.shape[0] / labels.shape[0] - kl_loss_forget * forget_indexes.shape[0] / labels.shape[0] 
+    return 0.5*kl_loss + loss_weight*loss_contrast
 
 
 def unlearning_step_scrub(model, model_dic, data_loader, optimizer, device, KL_temperature, opt):
