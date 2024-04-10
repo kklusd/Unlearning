@@ -30,7 +30,7 @@ $ python mu_main.py --method neggrad --mode random --data_path mu/saved_data --l
 ## Basic bad-teaching
 ##Instance-wise
 ```python
-$ python mu_main.py --method bad_teaching --mode random --data_path mu/saved_data --lr 0.005 --epoches 2 --loss_weight 0
+$ python mu_main.py --method bad_teaching --mode random --saved_data_path mu/saved_data --lr 0.005 --epoches 2 --loss_weight 0
 
 ```
 ##Classwise-wise
