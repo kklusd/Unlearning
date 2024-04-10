@@ -7,9 +7,9 @@ from tqdm import tqdm
 from .utils import save_config_file, accuracy, save_checkpoint, AverageMeter
 
 class SupClassifier(object):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         self.device = torch.device("cuda:0")
-        self.args = kwargs['args']
+        self.epochs = kwargs['epochs']
         self.model = kwargs['model'].to(self.device)
         self.optimizer = kwargs['optimizer']
         self.scheduler = kwargs['scheduler']
@@ -20,14 +20,12 @@ class SupClassifier(object):
         self.criterion = torch.nn.CrossEntropyLoss().to(self.device)
 
     def train(self):
-        # save config file
-        save_config_file(self.writer.log_dir, self.args)
         best_acc = 0
         n_iter = 0
-        logging.info(f"Start Classifier training for {self.args.epochs} epochs.")
+        logging.info(f"Start Classifier training for {self.epochs} epochs.")
         #logging.info(f"Training with gpu: {self.args.disable_cuda}.")
 
-        for epoch_counter in range(self.args.epochs):
+        for epoch_counter in range(self.epochs):
             self.model.train()
             losses = AverageMeter()
             top1 = AverageMeter()
@@ -64,9 +62,9 @@ class SupClassifier(object):
             logging.debug(f"Epoch:{epoch_counter}\tBest_val_acc:{best_acc}")
         logging.info("Training has finished.")
         # save model checkpoints
-        checkpoint_name = 'checkpoint_{:04d}.pth.tar'.format(self.args.epochs)
+        checkpoint_name = 'checkpoint_{:04d}.pth.tar'.format(self.epochs)
         save_checkpoint({
-            'epoch': self.args.epochs,
+            'epoch': self.epochs,
             'state_dict': self.model.state_dict(),
             'optimizer': self.optimizer.state_dict(),
         }, is_best=False, filename=os.path.join(self.writer.log_dir, checkpoint_name))

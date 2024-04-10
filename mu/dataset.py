@@ -17,6 +17,18 @@ class ContrastiveViewGenerator:
             img_ls.append(self.base_transform(x))
         return img_ls
 
+class RetrainData(Dataset):
+    def __init__(self, data):
+        super().__init__()
+        self.data = data
+        self.data_len = len(data)
+    def __len__(self):
+        return self.data_len
+    
+    def __get__item(self, index):
+        return self.data[index][0], self.data[index][1]
+
+
 
 
 class UnlearningData(Dataset):

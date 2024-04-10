@@ -7,6 +7,7 @@ from mu.Scrub import scrub, scrub_model_loader
 from mu.mu_basic import Neggrad,basic_model_loader,set_basic_loader,Retrain
 import os
 import pickle
+from mu.mu_retrain import *
 from mu.mu_data import alpr_aug, simple_aug
 import copy
 def main():
@@ -58,6 +59,16 @@ def main():
         print(forget_train==forget_set['train'],len(forget_train))
         # ----------------------------Eva--------------------------------
         Evaluation(model_dic, retain_train, retain_val, forget_set['train'], forget_val, opt, device)
+    elif method == "retrain":
+        assert opt.saved_data_path != '', "Must retrain from saved data!!"
+        param_path = ''
+        retrain_data = retain_set
+        val_data = retain_val
+        params = get_retrain_para(param_path)
+        train_loader = set_retrain_loader(retrain_data, params, mode="train")
+        val_loader = set_retrain_loader(val_data, params, mode="val")
+        retrain_model = retrain(params, train_loader, val_loader)
+        Evaluation(retrain_model, retain_train, retain_val, forget_set['train'], forget_val, opt, device)
     elif method == 'retrain':
         model_dic = basic_model_loader(opt, device)
         # ------------------------------dataloader--------------------------------------------------
