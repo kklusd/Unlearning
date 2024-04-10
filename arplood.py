@@ -94,9 +94,9 @@ def main():
     indexx = set_dataset('cifar10', './SimCLR/datasets', mode='random',
                 forget_classes=0, forget_num=5000,require_index=True)
     dataset = datasets.create(options['dataset'],forget_indexes=indexx, **options)
-    with open('runs/dataset_save_5000.pkl', 'wb') as f:
+    with open('runs/dataset_save_5000_48night.pkl', 'wb') as f:
         dill.dump(dataset, f)
-    np.save("runs/index_save_5000.npy", indexx)
+    np.save("runs/index_save_5000_48night.npy", indexx)
 
     #out_dataset = datasets.create(options['out_dataset'], **options)
     #trainloader, testloader = dataset.trainloader, dataset.testloader
