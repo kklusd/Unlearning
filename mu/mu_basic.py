@@ -1,13 +1,13 @@
 import torch
 import numpy as np
 from tqdm import tqdm
-from SimCLR.models.resnet_classifier import ResNetClassifier,ResNetClassifier_raw
+from SimCLR.models.resnet_classifier import ResNetClassifier
 from torch.utils.data import DataLoader
 from SimCLR.SupClassifier import SupClassifier
 from .mu_models import BasicClassifier
 np.random.seed(123)
 from .dataset import UnlearningData, BasicUnlearningData
-from torch.utils.tensorboard import SummaryWriter
+
 def set_basic_loader(forget_data, opt):
     unlearning_data = BasicUnlearningData(forget_data=forget_data)
     unlearning_loader = DataLoader(unlearning_data, batch_size=opt.batch_size, shuffle=True,
@@ -17,12 +17,12 @@ def basic_model_loader(opt, device):
     num_class = opt.num_class
     base_model = opt.base_model
     if opt.method == 'neggrad':
-        raw_model = ResNetClassifier_raw(num_class=num_class, base_model=base_model)
+        raw_model = ResNetClassifier(num_class=num_class, base_model=base_model)
         checkpoint_te = torch.load(opt.teacher_path, map_location=device)
-        raw_model.load_state_dict(checkpoint_te['state_dict'],strict=False)
+        raw_model.load_state_dict(checkpoint_te['state_dict'])
         raw_model.to(device)
-        competemodel = ResNetClassifier_raw(num_class=num_class, base_model=base_model)
-        competemodel.load_state_dict(checkpoint_te['state_dict'],strict=False)
+        competemodel = ResNetClassifier(num_class=num_class, base_model=base_model)
+        competemodel.load_state_dict(checkpoint_te['state_dict'])
         competemodel.to(device)
         competemodel.eval()
         model_dic = {'raw_model': raw_model,'compete_model': competemodel}
@@ -35,13 +35,13 @@ def basic_model_loader(opt, device):
 
 def unlearning_step_neggrad(model, data_loader, optimizer, device):
     losses = []
-    for batch in tqdm(data_loader, desc='unlearning', leave=False):
+    for batch in tqdm(data_loader, desc='test', leave=False):
         # for batch in data_loader:
         x, y = batch
         x, y = x.to(device), y.to(device)
         class_logits, _ = model(x)
         optimizer.zero_grad()
-        loss= -0.3*torch.nn.functional.cross_entropy(class_logits,y)
+        loss= -0.1*torch.nn.functional.cross_entropy(class_logits,y)
         loss.backward()
         optimizer.step()
         losses.append(loss.detach().cpu().numpy())
@@ -49,7 +49,7 @@ def unlearning_step_neggrad(model, data_loader, optimizer, device):
 
 def learning_step(model, data_loader, optimizer, device):
     losses = []
-    for batch in tqdm(data_loader, desc='Learning', leave=False):
+    for batch in tqdm(data_loader, desc='test', leave=False):
         # for batch in data_loader:
         x, y = batch
         x, y = x.to(device), y.to(device)
@@ -67,9 +67,9 @@ def Neggrad(model_dic, unlearing_loader, device, opt):
         model = model_dic['raw_model']
         optimizer = opt.optimizer
         if optimizer == 'adam':
-            optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+            optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
         else:
-            optimizer = torch.optim.SGD(model.parameters(), lr=0.001, momentum=0.9, weight_decay=5e-4)
+            optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
 
         loss = unlearning_step_neggrad(model=model, data_loader=unlearing_loader,
                                optimizer=optimizer, device=device)
@@ -77,12 +77,11 @@ def Neggrad(model_dic, unlearing_loader, device, opt):
 
 def Retrain(model_dic, train_loader,val_loader, device,opt):
     model = model_dic['raw_model']
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.03, momentum=0.9, weight_decay=1e-4)
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[80,100], gamma=0.1)
-    writer = SummaryWriter()
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.0003, momentum=0.9, weight_decay=1e-4)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
     with torch.cuda.device("cuda:0"):
         classifier = SupClassifier(model=model, optimizer=optimizer, scheduler=scheduler, train_loader=train_loader,
-                                   val_loader=val_loader, args=opt, writer=writer)
+                                   val_loader=val_loader, args=opt)
         classifier.train()
 
 
