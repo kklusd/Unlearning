@@ -10,7 +10,9 @@ import pickle
 from mu.mu_retrain import *
 from mu.mu_data import alpr_aug, simple_aug
 import copy
+import time
 def main():
+    time1 = time.time()
     opt = parser.parse_option()
     method = opt.method
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -101,6 +103,9 @@ def main():
             epoch = i+1
             scrub(model_dic=model_dic, unlearing_loader=unlearn_dl, epoch=epoch, device=device, opt=opt)
         Evaluation(model_dic,retain_train, retain_val,forget_set['train'], forget_val,opt,device)
+
+    time2 = time.time()
+    print('Total time:',time2-time1)
 
 if __name__ == '__main__':
     main()

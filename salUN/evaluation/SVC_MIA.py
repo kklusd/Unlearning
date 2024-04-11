@@ -1,20 +1,8 @@
 import numpy as np
 import torch
+import torch.nn.functional as F
+from imagenet import get_x_y_from_data_dict
 from sklearn.svm import SVC
-from torch.utils.data import DataLoader
-
-__all__ = [
-
-]
-
-
-def get_x_y_from_data_dict(data, device):
-    x, y = data.values()
-    if isinstance(x, list):
-        x, y = x[0].to(device), y[0].to(device)
-    else:
-        x, y = x.to(device), y.to(device)
-    return x, y
 
 
 def entropy(p, dim=-1, keepdim=False):
@@ -34,7 +22,7 @@ def m_entropy(p, labels, dim=-1, keepdim=False):
     return -torch.sum(modified_probs * modified_log_probs, dim=dim, keepdim=keepdim)
 
 
-def collect_prob(data_loader, model,method):
+def collect_prob(data_loader, model):
     if data_loader is None:
         return torch.zeros([0, 10]), torch.zeros([0])
 
@@ -55,15 +43,9 @@ def collect_prob(data_loader, model,method):
                 )
                 data, target = get_x_y_from_data_dict(batch, device)
             with torch.no_grad():
-                if method == 'bad_teaching' or method == 'scrub'or  method == 'retrain':
-                    output, _ = model(data)
-                    prob.append(output.data)
-                    targets.append(target)
-                elif method == 'neggrad' :
-                    output, _ = model(data)
-                    prob.append(output)
-                    targets.append(target)
-
+                output = model(data)
+                prob.append(F.softmax(output, dim=-1).data)
+                targets.append(target.to(torch.int64))
 
     return torch.cat(prob), torch.cat(targets)
 
@@ -71,7 +53,7 @@ def collect_prob(data_loader, model,method):
 def SVC_fit_predict(shadow_train, shadow_test, target_train, target_test):
     n_shadow_train = shadow_train.shape[0]
     n_shadow_test = shadow_test.shape[0]
-    n_target_train = None
+    n_target_train = target_train.shape[0]
     n_target_test = target_test.shape[0]
 
     X_shadow = (
@@ -80,42 +62,44 @@ def SVC_fit_predict(shadow_train, shadow_test, target_train, target_test):
         .numpy()
         .reshape(n_shadow_train + n_shadow_test, -1)
     )
-    Y_shadow = np.concatenate([np.zeros(n_shadow_train), np.ones(n_shadow_test)])
+    Y_shadow = np.concatenate([np.ones(n_shadow_train), np.zeros(n_shadow_test)])
 
     clf = SVC(C=3, gamma="auto", kernel="rbf")
     clf.fit(X_shadow, Y_shadow)
 
     accs = []
 
-    if n_target_train is not None:
+    if n_target_train > 0:
         X_target_train = target_train.cpu().numpy().reshape(n_target_train, -1)
         acc_train = clf.predict(X_target_train).mean()
         accs.append(acc_train)
 
     if n_target_test > 0:
         X_target_test = target_test.cpu().numpy().reshape(n_target_test, -1)
-        acc_test = clf.predict(X_target_test).mean()
+        acc_test = 1 - clf.predict(X_target_test).mean()
         accs.append(acc_test)
 
     return np.mean(accs)
 
 
-def SVC_MIA(shadow_train, target_train, target_test, shadow_test, model,method):
-    shadow_train_prob, shadow_train_labels = collect_prob(shadow_train, model,method)
-    shadow_test_prob, shadow_test_labels = collect_prob(shadow_test, model,method)
+def SVC_MIA(shadow_train, target_train, target_test, shadow_test, model):
+    shadow_train_prob, shadow_train_labels = collect_prob(shadow_train, model)
+    shadow_test_prob, shadow_test_labels = collect_prob(shadow_test, model)
 
-    target_train_prob, target_train_labels = collect_prob(target_train, model,method)
-    target_test_prob, target_test_labels = collect_prob(target_test, model,method)
+    target_train_prob, target_train_labels = collect_prob(target_train, model)
+    target_test_prob, target_test_labels = collect_prob(target_test, model)
 
     shadow_train_corr = (
-        torch.argmax(shadow_train_prob,1) == shadow_train_labels
+        torch.argmax(shadow_train_prob, axis=1) == shadow_train_labels
     ).int()
     shadow_test_corr = (
-        torch.argmax(shadow_test_prob,1) == shadow_test_labels
+        torch.argmax(shadow_test_prob, axis=1) == shadow_test_labels
     ).int()
-    target_train_corr = None
+    target_train_corr = (
+        torch.argmax(target_train_prob, axis=1) == target_train_labels
+    ).int()
     target_test_corr = (
-        torch.argmax(target_test_prob,1) == target_test_labels
+        torch.argmax(target_test_prob, axis=1) == target_test_labels
     ).int()
 
     shadow_train_conf = torch.gather(shadow_train_prob, 1, shadow_train_labels[:, None])
@@ -162,37 +146,5 @@ def SVC_MIA(shadow_train, target_train, target_test, shadow_test, model,method):
         "m_entropy": acc_m_entr,
         "prob": acc_prob,
     }
+    print(m)
     return m
-
-
-"""forget efficacy MIA:
-    in distribution: retain
-    out of distribution: test
-    target: (, forget)
-    train data:label0 ;val data:label1"""
-def MIA(rt,rv,test,model,method):
-    test_len = 500
-    MIA_batch_size = test_len // 2
-    shadow_train = torch.utils.data.Subset(rt, list(range(test_len)))
-    shadow_train_loader = torch.utils.data.DataLoader(
-        shadow_train, batch_size=MIA_batch_size, shuffle=False
-    )
-    shadow_test = torch.utils.data.Subset(rv, list(range(test_len)))
-    shadow_test_loader = torch.utils.data.DataLoader(
-        shadow_test, batch_size=MIA_batch_size, shuffle=False
-    )
-    target_test = torch.utils.data.Subset(test, list(range(100)))
-    target_test_loader = torch.utils.data.DataLoader(
-        target_test, batch_size=MIA_batch_size, shuffle=False
-    )
-    m = SVC_MIA(
-        shadow_train=shadow_train_loader,
-        shadow_test=shadow_test_loader,
-        target_train=None,
-        target_test=target_test_loader,
-        model=model,
-        method = method
-    )
-    return m
-
-
