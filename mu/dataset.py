@@ -18,15 +18,33 @@ class ContrastiveViewGenerator:
         return img_ls
 
 class RetrainData(Dataset):
-    def __init__(self, data):
+    def __init__(self, root_folder, retain_indexes, mode, transform=None):
         super().__init__()
-        self.data = data
-        self.data_len = len(data)
+        self.data = self.get_data(root_folder, retain_indexes, mode)
+        self.data_len = len(self.data)
+        self.transform = transform
+    
+    @staticmethod
+    def get_data(root_folder, retain_indexes, mode):
+        data_set = CIFAR10(root_folder, transform=None, download=True, train=mode=="train")
+        data = []
+        if mode == "train":
+            for index in retain_indexes:
+                data.append(data_set[index])
+        else:
+            for i in range(len(data_set)):
+                data.append(data_set[i])
+        return data
+
     def __len__(self):
         return self.data_len
     
-    def __get__item(self, index):
-        return self.data[index][0], self.data[index][1]
+    def __getitem__(self, index):
+        img = self.data[index][0]
+        if self.transform is not None:
+            img = self.transform(img)
+        label = self.data[index][1]
+        return img, label
 
 
 

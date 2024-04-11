@@ -39,7 +39,7 @@ def unlearning_step_neggrad(model, data_loader, optimizer, device):
         # for batch in data_loader:
         x, y = batch
         x, y = x.to(device), y.to(device)
-        class_logits = model(x)
+        class_logits, _ = model(x)
         optimizer.zero_grad()
         loss= -0.1*torch.nn.functional.cross_entropy(class_logits,y)
         loss.backward()
@@ -53,7 +53,7 @@ def learning_step(model, data_loader, optimizer, device):
         # for batch in data_loader:
         x, y = batch
         x, y = x.to(device), y.to(device)
-        class_logits = model(x)
+        class_logits, _ = model(x)
         optimizer.zero_grad()
         loss= torch.nn.functional.cross_entropy(class_logits,y)
         loss.backward()

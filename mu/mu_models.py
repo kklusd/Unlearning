@@ -14,7 +14,7 @@ class BasicResnet(nn.Module):
         else:
             raise ValueError(base_model)
         self.base.fc = nn.Sequential()
-    
+        self.base.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False)
     def forward(self, x):
         return self.base(x)
     

@@ -27,7 +27,7 @@ def set_loader(retain_data, forget_data, opt):
                                    num_workers=opt.num_worker, pin_memory=True)
     return unlearning_loader
 
-def set_dataset(data_name, root, mode='classwise', forget_classes=0, forget_num=0,require_index = False,augment = False):
+def set_dataset(data_name, root, mode='classwise', forget_classes=0, forget_num=0):
     if data_name == 'cifar10':
         size = 32
         mean = (0.4914, 0.4822, 0.4465)
@@ -57,17 +57,21 @@ def set_dataset(data_name, root, mode='classwise', forget_classes=0, forget_num=
         assert forget_classes >= 0 and forget_classes < 10, 'must select 0-9 class to forget'
         classwise_forget = {'train': [], 'val': []}
         classwise_retain = {'train': [], 'val': []}
-        for img, label in train_ds:
+        retain_indexes = []
+        for i in range(len(train_ds)):
+            label = train_ds[i][1]
+            img = train_ds[i][0]
             if label == forget_classes:
                 classwise_forget['train'].append((img, label))
             else:
                 classwise_retain['train'].append((img, label))
+                retain_indexes.append(i)
         for img, label in val_ds:
             if label == forget_classes:
                 classwise_forget['val'].append((img, label))
             else:
                 classwise_retain['val'].append((img, label))
-        return classwise_forget, classwise_retain
+        return classwise_forget, classwise_retain, retain_indexes
     elif mode == 'random':
         assert forget_num > 0 and forget_num < len(train_ds), 'must ensure forget_num is larger than 0'
         all_indexes = np.arange(0, len(train_ds),1,dtype=np.int16)
@@ -76,8 +80,6 @@ def set_dataset(data_name, root, mode='classwise', forget_classes=0, forget_num=
         retain_indexes = all_indexes[forget_num:]
         random_forget = {'train':[], 'val': []}
         random_retain = {'train': [], 'val': []}
-        if require_index:
-            return forget_indexes
         for index in forget_indexes:
             random_forget['train'].append(train_ds[index])
 
@@ -92,7 +94,7 @@ def set_dataset(data_name, root, mode='classwise', forget_classes=0, forget_num=
         for img, label in val_ds:
             random_retain['val'].append((img, label))
 
-        return random_forget, random_retain
+        return random_forget, random_retain, retain_indexes
     else:
         raise ValueError(mode)
 

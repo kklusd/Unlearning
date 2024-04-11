@@ -58,13 +58,18 @@ def get_features(args, device):
         else:
             forget_data_file = os.path.join('mu/saved_data', 'forget_data.pt')
             retain_data_file = os.path.join('mu/saved_data', 'retain_data.pt')
-            forget_set, retain_set = set_dataset(args.data_name,args.data_root, mode='random',
+            retain_indexes_file = os.path.join('mu/saved_data', 'retain_indexes.pt')
+            forget_set, retain_set, retain_indexes = set_dataset(args.data_name,args.data_root, mode='random',
                                          forget_classes=0, forget_num=args.forget_num)
+            print(len(retain_indexes))
             with open(forget_data_file, 'wb') as f:
                 pickle.dump(forget_set, f) 
                 f.close()
             with open(retain_data_file, 'wb') as f:
                 pickle.dump(retain_set, f)
+                f.close()
+            with open(retain_indexes_file, 'wb') as f:
+                pickle.dump(retain_indexes, f)
                 f.close()
             forget_data = forget_set['train']
             retain_data = retain_set['val']

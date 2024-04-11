@@ -3,7 +3,7 @@ import argparse
 def parse_option():
     parser = argparse.ArgumentParser('argument for unlearning')
     parser.add_argument('--base_model', type=str, default='resnet18', help='basic model for classification')
-    parser.add_argument('--teacher_path', type=str, default='./SimCLR/runs/original_model/checkpoint_0150.pth.tar',
+    parser.add_argument('--teacher_path', type=str, default='./SimCLR/runs/original_model/checkpoint_0300.pth.tar',
                         help='teacher model path')
     parser.add_argument('--num_class', type=int, default=10, help='number of classes in dataset')
     parser.add_argument('--sim_path', type=str, default='./SimCLR/runs/sim_model/checkpoint_0200.pth.tar',

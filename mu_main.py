@@ -18,14 +18,18 @@ def main():
     if opt.mode == 'random' and opt.saved_data_path != '':
         forget_data_file = os.path.join(opt.saved_data_path, 'forget_data.pt')
         retain_data_file = os.path.join(opt.saved_data_path, 'retain_data.pt')
+        retain_indexes_file = os.path.join(opt.saved_data_path, 'retain_indexes.pt')
         with open(forget_data_file, 'rb') as f:
                 forget_set = pickle.load(f)
                 f.close()
         with open(retain_data_file, 'rb') as f:
             retain_set = pickle.load(f)
             f.close()
+        with open(retain_indexes_file, 'rb') as f:
+            retain_indexes = pickle.load(f)
+            f.close()
     else:
-        forget_set, retain_set = set_dataset(opt.data_name, opt.data_root, mode=opt.mode,
+        forget_set, retain_set, retain_indexes = set_dataset(opt.data_name, opt.data_root, mode=opt.mode,
                                             forget_classes=opt.forget_class, forget_num=opt.forget_num)
     forget_train = copy.deepcopy(forget_set['train'])
     forget_val = forget_set['val']
@@ -56,33 +60,39 @@ def main():
         # ----------------------------Training Process--------------------------------
         Neggrad(model_dic=model_dic, unlearing_loader=unlearn_dl, device=device, opt=opt)
 
-        print(forget_train==forget_set['train'],len(forget_train))
+        # print(forget_train==forget_set['train'],len(forget_train))
         # ----------------------------Eva--------------------------------
         Evaluation(model_dic, retain_train, retain_val, forget_set['train'], forget_val, opt, device)
     elif method == "retrain":
         assert opt.saved_data_path != '', "Must retrain from saved data!!"
-        param_path = ''
-        retrain_data = retain_set
-        val_data = retain_val
-        params = get_retrain_para(param_path)
-        train_loader = set_retrain_loader(retrain_data, params, mode="train")
-        val_loader = set_retrain_loader(val_data, params, mode="val")
-        retrain_model = retrain(params, train_loader, val_loader)
-        Evaluation(retrain_model, retain_train, retain_val, forget_set['train'], forget_val, opt, device)
-    elif method == 'retrain':
-        model_dic = basic_model_loader(opt, device)
-        # ------------------------------dataloader--------------------------------------------------
-        unlearn_dl = set_basic_loader(retain_train, opt)
-        train_loader = torch.utils.data.DataLoader(retain_train, batch_size=opt.batch_size, shuffle=True,
-                                                   num_workers=opt.num_worker, pin_memory=True, sampler=None)
-        val_loader = torch.utils.data.DataLoader(retain_val, batch_size=100, shuffle=False, num_workers=2,
-                                                 pin_memory=True)
-
-        # ----------------------------Training Process--------------------------------
-        Retrain(model_dic=model_dic, train_loader=train_loader,val_loader = val_loader, device=device, opt=opt)
-
-        # ----------------------------Eva--------------------------------
+        retrain = False
+        if retrain:
+            param_path = 'SimCLR/runs/params.json'
+            params = get_retrain_para(param_path)
+            retain_indexes = list(range(0, 50000))
+            train_loader = set_retrain_loader(opt.data_root, retain_indexes, params, mode="train")
+            val_loader = set_retrain_loader(opt.data_root, retain_indexes, params, mode="val")
+            retrain_model = retrain(params, train_loader, val_loader)
+            model_dic = {'raw_model': retrain_model}
+        else:
+            retrain_model_path = 'SimCLR/runs/retrain_model/checkpoint_0300.pth.tar'
+            raw_model_path = 'SimCLR/runs/original_model/checkpoint_0300.pth.tar'
+            model_dic = model_loader(opt, device, raw_model_path, retrain_model_path)
         Evaluation(model_dic, retain_train, retain_val, forget_set['train'], forget_val, opt, device)
+    # elif method == 'retrain':
+    #     model_dic = basic_model_loader(opt, device)
+    #     # ------------------------------dataloader--------------------------------------------------
+    #     unlearn_dl = set_basic_loader(retain_train, opt)
+    #     train_loader = torch.utils.data.DataLoader(retain_train, batch_size=opt.batch_size, shuffle=True,
+    #                                                num_workers=opt.num_worker, pin_memory=True, sampler=None)
+    #     val_loader = torch.utils.data.DataLoader(retain_val, batch_size=100, shuffle=False, num_workers=2,
+    #                                              pin_memory=True)
+
+    #     # ----------------------------Training Process--------------------------------
+    #     Retrain(model_dic=model_dic, train_loader=train_loader,val_loader = val_loader, device=device, opt=opt)
+
+    #     # ----------------------------Eva--------------------------------
+    #     Evaluation(model_dic, retain_train, retain_val, forget_set['train'], forget_val, opt, device)
 
     elif method == 'scrub':
         model_dic = scrub_model_loader(opt, device)

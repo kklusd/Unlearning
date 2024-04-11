@@ -56,11 +56,11 @@ def collect_prob(data_loader, model,method):
                 data, target = get_x_y_from_data_dict(batch, device)
             with torch.no_grad():
                 if method == 'bad_teaching' or method == 'scrub':
-                    output = model(data)[0]
+                    output, _ = model(data)
                     prob.append(output.data)
                     targets.append(target)
                 elif method == 'neggrad' or  method == 'retrain':
-                    output = model(data)
+                    output, _ = model(data)
                     prob.append(output)
                     targets.append(target)
 

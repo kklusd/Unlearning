@@ -13,6 +13,7 @@ class ResNetClassifier(nn.Module):
     def _get_basemodel(self, model_name):
         try:
             model = self.resnet_dict[model_name]
+            model.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False)
             fc_features = model.fc.in_features
             model.fc = nn.Sequential()
             fc = nn.Linear(fc_features, self.num_class)
