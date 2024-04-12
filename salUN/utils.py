@@ -6,7 +6,7 @@
 import copy
 import os
 import random
-
+from mu.mu_retrain import *
 # from advertorch.utils import NormalizeByChannelMeanStd
 import shutil
 import sys
@@ -128,22 +128,24 @@ def setup_model_dataset(args):
             seed=args.seed,
             only_mark=True,
             shuffle=True,
-            no_aug=args.no_aug,
+            no_aug=True,
         )
 
-        if args.train_seed is None:
-            args.train_seed = args.seed
+
+        args.train_seed = args.seed
         setup_seed(args.train_seed)
 
-        if args.imagenet_arch:
-            model = model_dict[args.arch](num_classes=classes, imagenet=True)
-        else:
-            model = model_dict[args.arch](num_classes=classes)
-
+        if True:
+            # --------------------------换模型-----------------------------------------------
+            #model = model_dict[args.arch](num_classes=classes)
+            param_path = 'SimCLR/runs/params.json'
+            params = get_retrain_para(param_path)
+            raw_check_point = torch.load('./SimCLR/runs/original_model/checkpoint_0300.pth.tar',map_location='cuda:0')
+            model = ResNetClassifier(params["arch"], num_class=classes, weights='IMAGENET1K_V1')
+            model.load_state_dict(raw_check_point['state_dict'])
         setup_seed(args.train_seed)
 
-        model.normalize = normalization
-        print(model)
+        #model.normalize = normalization
         return model, train_full_loader, val_loader, test_loader, marked_loader
     elif args.dataset == "svhn":
         classes = 10

@@ -7,16 +7,16 @@ import torch
 import torch.nn as nn
 import torch.optim
 import torch.utils.data
-import unlearn
-import utils
+import salUN.unlearn
+import salUN.utils as utils
 
 
 def save_gradient_ratio(data_loaders, model, criterion, args):
     optimizer = torch.optim.SGD(
         model.parameters(),
         args.unlearn_lr,
-        momentum=args.momentum,
-        weight_decay=args.weight_decay,
+        momentum=0.9,
+        weight_decay=5e-4,
     )
 
     gradients = {}
@@ -32,7 +32,7 @@ def save_gradient_ratio(data_loaders, model, criterion, args):
         target = target.cuda()
 
         # compute output
-        output_clean = model(image)
+        output_clean,_ = model(image)
         loss = - criterion(output_clean, target.to(torch.int64))
 
         optimizer.zero_grad()

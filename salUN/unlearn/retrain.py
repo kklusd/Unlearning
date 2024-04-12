@@ -1,4 +1,4 @@
-from trainer import train
+from salUN.trainer import train
 
 from .impl import iterative_unlearn
 

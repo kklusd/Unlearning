@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
-from imagenet import get_x_y_from_data_dict
+from salUN.imagenet import get_x_y_from_data_dict
 from sklearn.svm import SVC
 
 
@@ -43,7 +43,7 @@ def collect_prob(data_loader, model):
                 )
                 data, target = get_x_y_from_data_dict(batch, device)
             with torch.no_grad():
-                output = model(data)
+                output,_ = model(data)
                 prob.append(F.softmax(output, dim=-1).data)
                 targets.append(target.to(torch.int64))
 

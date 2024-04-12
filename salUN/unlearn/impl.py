@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pruner
 import torch
-import utils
-from pruner import extract_mask, prune_model_custom, remove_prune
+import salUN.utils as utils
+from salUN.pruner import extract_mask, prune_model_custom, remove_prune
 
 
 def plot_training_curve(training_result, save_dir, prefix):
@@ -54,25 +54,15 @@ def load_unlearn_checkpoint(model, device, args):
 def _iterative_unlearn_impl(unlearn_iter_func):
     def _wrapped(data_loaders, model, criterion, args, mask=None, **kwargs):
         decreasing_lr = list(map(int, args.decreasing_lr.split(",")))
-        if args.rewind_epoch != 0:
-            initialization = torch.load(
-                args.rewind_pth, map_location=torch.device("cuda:" + str(args.gpu))
-            )
-            current_mask = extract_mask(model.state_dict())
-            remove_prune(model)
-            # weight rewinding
-            # rewind, initialization is a full model architecture without masks
-            model.load_state_dict(initialization, strict=True)
-            prune_model_custom(model, current_mask)
-    
+
         optimizer = torch.optim.SGD(
             model.parameters(),
-            args.unlearn_lr,
-            momentum=args.momentum,
-            weight_decay=args.weight_decay,
+            0.01,
+            momentum=0.9,
+            weight_decay=5e-4,
         )
 
-        if args.imagenet_arch and args.unlearn == "retrain":
+        if  args.unlearn == "retrain":
             lambda0 = (
                 lambda cur_iter: (cur_iter + 1) / args.warmup
                 if cur_iter < args.warmup
@@ -95,10 +85,7 @@ def _iterative_unlearn_impl(unlearn_iter_func):
             scheduler = torch.optim.lr_scheduler.MultiStepLR(
                 optimizer, milestones=decreasing_lr, gamma=0.1
             )  # 0.1 is fixed
-        if args.rewind_epoch != 0:
-            # learning rate rewinding
-            for _ in range(args.rewind_epoch):
-                scheduler.step()
+
         for epoch in range(0, args.unlearn_epochs):
             start_time = time.time()
 

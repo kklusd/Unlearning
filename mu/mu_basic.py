@@ -3,7 +3,7 @@ import numpy as np
 from tqdm import tqdm
 from SimCLR.models.resnet_classifier import ResNetClassifier
 from torch.utils.data import DataLoader
-from SimCLR.SupClassifier import SupClassifier
+from SimCLR.SupClassifier_un import SupClassifier
 from .mu_models import BasicClassifier
 np.random.seed(123)
 from .dataset import UnlearningData, BasicUnlearningData

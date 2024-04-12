@@ -71,7 +71,7 @@ def parse_args():
     parser.add_argument("--momentum", default=0.9, type=float, help="momentum")
     parser.add_argument("--weight_decay", default=5e-4, type=float, help="weight decay")
     parser.add_argument(
-        "--epochs", default=18, type=int, help="number of total epochs to run"
+        "--epochs", default=1, type=int, help="number of total epochs to run"
     )
     parser.add_argument("--warmup", default=0, type=int, help="warm up epochs")
     parser.add_argument("--print_freq", default=50, type=int, help="print frequency")
