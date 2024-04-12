@@ -26,7 +26,12 @@ $ python mu_main.py --method retrain --mode random --saved_data_path mu/saved_da
 ```python
 $ python mu_main.py --method neggrad --mode random --saved_data_path mu/saved_data --lr 0.005 --epoches 2 --loss_weight 0
 ```
+## Basic salUN
+##Instance-wise
+```python
+$ python mu_main.py --method salUN --mode random --saved_data_path mu/saved_data --lr 0.0013 --epoches 2 
 
+```
 ## Basic bad-teaching
 ##Instance-wise
 ```python
