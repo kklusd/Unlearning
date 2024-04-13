@@ -60,3 +60,15 @@ class FeaturesGenerator:
         retain_features = torch.cat(retain_features, dim=0).cpu()
         torch.save(retain_features, os.path.join(out_path, 'retain_features.pt'))
         return forget_features, retain_features
+
+    def generate2(self, generate_data, batch_size):
+        generate_set = OwnDataset(generate_data)
+        generate_loader = DataLoader(generate_set, batch_size=batch_size, shuffle=False,
+                                   num_workers=2, pin_memory=True)
+        generate_features = []
+        for batch in tqdm(generate_loader, desc='forget features generate',leave=False):
+            x = batch.to(self.device)
+            features = self.model(x).detach().unsqueeze_(-1).unsqueeze_(-1)
+            generate_features.append(features)
+        generate_features = torch.cat(generate_features, dim=0).cpu()
+        return generate_features
