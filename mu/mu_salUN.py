@@ -70,7 +70,7 @@ def salUN_process(unlearn_data_loader,model,opt,forget_set,retain_set):
             print(f"{name} acc: {val_acc}")
 
         evaluation_result["accuracy"] = accuracy
-
+    evaluation_result['Geo_metric'] = abs(accuracy['forget']-95.77)*abs(accuracy['test']-95.77)
     forget_train = copy.deepcopy(forget_set['train'])
     forget_val = forget_set['val']
     retain_train = retain_set['train']

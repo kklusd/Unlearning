@@ -60,7 +60,7 @@ def Evaluation(model_dic,retain_train,retain_val,forget_train,forget_val,opt,dev
         print('AccDf:{}'.format(Eva_Df_after['Acc']))
         print('AccDt:{}'.format(Eva_Dt_after['Acc']))
         print(Eva_Df_before['Acc'], Eva_Df_after['Acc'], Eva_Dr_after['Acc'], Eva_Dr_before['Acc'])
-        print('Geo_metric:{}'.format((Eva_Df_after['Acc'] - 90) * (Eva_Dt_after['Acc'] - 80)))
+        print('Geo_metric:{}'.format(abs((Eva_Df_after['Acc'] - 95.77) * abs(Eva_Dt_after['Acc'] - 95.77))))
         print(m1)
 
     if opt.method == 'neggrad':
