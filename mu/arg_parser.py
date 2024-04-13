@@ -57,7 +57,7 @@ def parse_option():
     parser.add_argument(
         "--save_dir",
         help="The directory used to save the trained models",
-        default='salUN/run/saved_models',
+        default='salUN/run/un_models',
         type=str,
     )
     parser.add_argument("--model_path", type=str, default='run/0model_SA_best.pth.tar',
@@ -104,7 +104,7 @@ def parse_option():
         help="Specific index data to forget",
     )
     parser.add_argument("--alpha", default=0.2, type=float, help="unlearn noise")
-    parser.add_argument("--mask_path", default='salUN/run/saved_masks/with_0.5.pt', type=str,
+    parser.add_argument("--mask_path", default=None, type=str,
                         help="the path of saliency map")
 
     opt = parser.parse_args()

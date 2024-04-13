@@ -58,11 +58,13 @@ def salUN_process(unlearn_data_loader,model,opt,forget_set,retain_set):
 
     if opt.mask_path == None:
         save_gradient_ratio(unlearn_data_loader, model, criterion, opt)
+        mask_path = os.path.join(opt.save_dir, 'with_0.5.pt')
+        mask = torch.load(mask_path)
     else:
         mask = torch.load(opt.mask_path)
-        unlearn_method = salUN.unlearn.get_unlearn_method(opt.unlearn)
-        unlearn_method(unlearn_data_loader, model, criterion, opt, mask)
-        salUN.unlearn.save_unlearn_checkpoint(model, None, opt)
+    unlearn_method = salUN.unlearn.get_unlearn_method(opt.unlearn)
+    unlearn_method(unlearn_data_loader, model, criterion, opt, mask)
+    salUN.unlearn.save_unlearn_checkpoint(model, None, opt)
 
     if evaluation_result is None:
         evaluation_result = {}
