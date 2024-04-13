@@ -14,8 +14,8 @@ import time
 
 import numpy as np
 import torch
-from salUN.dataset_21 import *
-from salUN.dataset_21 import TinyImageNet
+from salUN.dataset import *
+from salUN.dataset import TinyImageNet
 from salUN.imagenet import prepare_data
 from salUN.models import *
 from torchvision import transforms
