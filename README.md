@@ -1,5 +1,5 @@
 # Basic unlearning method
-This is our Capstone project of Machine Unlearning
+～This is our Capstone project of Machine Unlearning.  
 3 different Unlearning methods are included: bad_teaching and scrub which based on Knowledge Distillation framework; neggrad directly using negative gradient(gradient ascent) of forget samples.
 Besides, we conduct 2 self-supervised methods to help unlearning, both of which are based on contrastive learning.
 
