@@ -24,8 +24,8 @@ def main():
         retain_data_file = os.path.join(opt.saved_data_path, 'retain_data.pt')
         retain_indexes_file = os.path.join(opt.saved_data_path, 'retain_indexes.pt')
         with open(forget_data_file, 'rb') as f:
-                forget_set = pickle.load(f)
-                f.close()
+            forget_set = pickle.load(f)
+            f.close()
         with open(retain_data_file, 'rb') as f:
             retain_set = pickle.load(f)
             f.close()

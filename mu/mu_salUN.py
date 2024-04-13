@@ -1,23 +1,15 @@
 import copy
 import os
-import time
+
 from collections import OrderedDict
-import pickle
-from mu.bad_teaching import set_dataset
 import salUN.arg_parser_salun
 import salUN.evaluation as evaluation
-import torch
-import torch.nn as nn
 import torch.optim
 import torch.utils.data
 import salUN.unlearn as unlearn
-import salUN.utils as utils
-from salUN.trainer import validate
-import mu.arg_parser as parser
-from torch.utils.data import DataLoader
 from salUN.trainer import train, validate
 from mu.mu_retrain import *
-from salUN.utils import setup_seed
+
 from salUN.generate_mask import save_gradient_ratio
 
 def set_salUN_loader(forget_set,retain_set, opt):
