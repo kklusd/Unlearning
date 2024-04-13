@@ -112,20 +112,29 @@ def Evaluation(model_dic,retain_train,retain_val,forget_train,forget_val,opt,dev
         competemodel = model_dic['compete_teacher']
 
         #--------------------------------------------------------------
-        print('Before unlearning teacher forget')
-        print(evaluate(competemodel, forget_val_dl, device))
-        print('Before unlearning teacher retain')
-        print(evaluate(competemodel, retain_val_dl, device))
-        print('After unlearning epoch {}'.format(opt.epoches))
-        print('After unlearning student forget')
-        print(evaluate(model, forget_val_dl, device))#instance时候没有意义
-        print('After unlearning student retain')
-        print(evaluate(model, retain_val_dl, device))
-        # ------------------other metrics----------------------
-        m2 = MIA(rt = retain_train, rv = retain_val, test = forget_train, model=model, method = opt.method)
-        print(m2)
+        model = model_dic['student']
+        competemodel = model_dic['compete_teacher']
 
-    if opt.method == 'salUN':
+        Eva_Dr_before = evaluate(competemodel, retain_train_dl, device)
+        Eva_Df_before = evaluate(competemodel, forget_train_dl, device)
+        Eva_Dt_after = evaluate(model, retain_val_dl, device)
+        Eva_Dr_after = evaluate(model, retain_train_dl, device)
+        Eva_Df_after = evaluate(model, forget_train_dl, device)
+        m1 = MIA(rt=retain_train, rv=retain_val, test=forget_train, model=model, method=opt.method)
+
+        print('Before unlearning forget')
+        print(Eva_Df_before)
+        print('After unlearning epoch {} forget'.format(opt.epoches))
+        print(Eva_Dt_after)
+        print('AccDr:{}'.format(Eva_Dr_after['Acc']))
+        print('AccDf:{}'.format(Eva_Df_after['Acc']))
+        print('AccDt:{}'.format(Eva_Dt_after['Acc']))
+        print(Eva_Df_before['Acc'], Eva_Df_after['Acc'], Eva_Dr_after['Acc'], Eva_Dr_before['Acc'])
+        print('Geo_metric:{}'.format(abs((Eva_Df_after['Acc'] - 95.77) * abs(Eva_Dt_after['Acc'] - 95.77))))
+        print(m1)
+
+
+if opt.method == 'salUN':
         model = model_dic['raw_model']
         m1 = MIA(rt=retain_train, rv=retain_val, test=forget_train, model=model,method = opt.method)
         print(m1)
