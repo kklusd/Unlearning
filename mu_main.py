@@ -95,7 +95,8 @@ def main():
         unlearn_dl = set_salUN_loader(forget_set, retain_set, opt)
         model_dic = salUN_model_loader(opt, device)
         model = model_dic['raw_model']
-        salUN_process(unlearn_data_loader = unlearn_dl,model = model,opt = opt)
+        salUN_process(unlearn_data_loader = unlearn_dl,model = model,opt = opt,forget_set=forget_set, retain_set=retain_set)
+        Evaluation(model_dic,retain_train, retain_val,forget_set['train'], forget_val,opt,device)
 
     time2 = time.time()
     print('Total time:',time2-time1)

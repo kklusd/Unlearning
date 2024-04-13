@@ -55,7 +55,7 @@ def collect_prob(data_loader, model,method):
                 )
                 data, target = get_x_y_from_data_dict(batch, device)
             with torch.no_grad():
-                if method == 'bad_teaching' or method == 'scrub'or  method == 'retrain':
+                if method == 'bad_teaching' or method == 'scrub'or  method == 'retrain' or method == 'salUN':
                     output, _ = model(data)
                     prob.append(output.data)
                     targets.append(target)
@@ -171,17 +171,17 @@ def SVC_MIA(shadow_train, target_train, target_test, shadow_test, model,method):
     target: (, forget)
     train data:label0 ;val data:label1"""
 def MIA(rt,rv,test,model,method):
-    test_len = 500
-    MIA_batch_size = test_len // 2
-    shadow_train = torch.utils.data.Subset(rt, list(range(test_len)))
+    test_len = 2000
+    MIA_batch_size = 256
+    shadow_train = torch.utils.data.Subset(rt, list(range(2000)))
     shadow_train_loader = torch.utils.data.DataLoader(
         shadow_train, batch_size=MIA_batch_size, shuffle=False
     )
-    shadow_test = torch.utils.data.Subset(rv, list(range(test_len)))
+    shadow_test = torch.utils.data.Subset(rv, list(range(1000)))
     shadow_test_loader = torch.utils.data.DataLoader(
         shadow_test, batch_size=MIA_batch_size, shuffle=False
     )
-    target_test = torch.utils.data.Subset(test, list(range(100)))
+    target_test = torch.utils.data.Subset(test, list(range(500)))
     target_test_loader = torch.utils.data.DataLoader(
         target_test, batch_size=MIA_batch_size, shuffle=False
     )

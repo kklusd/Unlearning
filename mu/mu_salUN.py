@@ -52,7 +52,7 @@ def salUN_model_loader(opt, device):
     model_dic = {'raw_model': model}
     return model_dic
 
-def salUN_process(unlearn_data_loader,model,opt):
+def salUN_process(unlearn_data_loader,model,opt,forget_set,retain_set):
     criterion = nn.CrossEntropyLoss()
     evaluation_result = None
 
@@ -77,3 +77,28 @@ def salUN_process(unlearn_data_loader,model,opt):
 
         evaluation_result["accuracy"] = accuracy
 
+    forget_train = copy.deepcopy(forget_set['train'])
+    forget_val = forget_set['val']
+    retain_train = retain_set['train']
+    retain_val = retain_set['val']
+    shadow_train = torch.utils.data.Subset(retain_train, list(range(2000)))
+    shadow_train_loader = torch.utils.data.DataLoader(
+        shadow_train, batch_size=opt.batch_size, shuffle=False
+    )
+    shadow_test = torch.utils.data.Subset(retain_val, list(range(1000)))
+    shadow_test_loader = torch.utils.data.DataLoader(
+        shadow_test, batch_size=opt.batch_size, shuffle=False
+    )
+    target_test = torch.utils.data.Subset(forget_train, list(range(500)))
+    target_test_loader = torch.utils.data.DataLoader(
+        target_test, batch_size=opt.batch_size, shuffle=False
+    )
+
+    salUN.evaluation.SVC_MIA(
+        shadow_train=shadow_train_loader,
+        shadow_test=shadow_test_loader,
+        target_train=None,
+        target_test=target_test_loader,
+        model=model,
+    )
+    print(evaluation_result)

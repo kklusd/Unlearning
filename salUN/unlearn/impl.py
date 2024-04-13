@@ -57,7 +57,7 @@ def _iterative_unlearn_impl(unlearn_iter_func):
 
         optimizer = torch.optim.SGD(
             model.parameters(),
-            0.01,
+            args.lr,
             momentum=0.9,
             weight_decay=5e-4,
         )

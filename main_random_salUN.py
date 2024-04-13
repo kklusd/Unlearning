@@ -174,17 +174,24 @@ def main():
             forget_len = len(forget_train)
             retain_len = len(retain_train)
 
-            shadow_train = torch.utils.data.Subset(retain_train, list(range(test_len)))
+            shadow_train = torch.utils.data.Subset(retain_train[:2000], list(range(test_len)))
             shadow_train_loader = torch.utils.data.DataLoader(
                 shadow_train, batch_size=args.batch_size, shuffle=False
             )
-
+            shadow_test = torch.utils.data.Subset(retain_val, list(range(1000)))
+            shadow_test_loader = torch.utils.data.DataLoader(
+                shadow_test, batch_size=args.batch_size, shuffle=False
+            )
+            target_test = torch.utils.data.Subset(forget_train, list(range(500)))
+            target_test_loader = torch.utils.data.DataLoader(
+                target_test, batch_size=args.batch_size, shuffle=False
+            )
 
             evaluation_result["SVC_MIA_forget_efficacy"] = salUN.evaluation.SVC_MIA(
-                shadow_train=ret_loader,
-                shadow_test=vall_loader,
+                shadow_train=shadow_train_loader,
+                shadow_test=shadow_test_loader,
                 target_train=None,
-                target_test=for_loader,
+                target_test=target_test_loader,
                 model=model,
             )
             print(evaluation_result)
