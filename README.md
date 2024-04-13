@@ -1,5 +1,5 @@
 # Basic unlearning method
-This is our Capstone project on the topic of Machine Unlearning
+This is our Capstone project of Machine Unlearning
 There are total 3 different Unlearning methods including: bad_teaching and scrub which based distillation framework; neggrad which directly uses negative gradient(gradient ascent) of forget samples.
 Besides, we have 2 self-supervised methods to help unlearning and all of both based on contrastive learning.
 
@@ -26,7 +26,12 @@ $ python mu_main.py --method retrain --mode random --saved_data_path mu/saved_da
 ```python
 $ python mu_main.py --method neggrad --mode random --saved_data_path mu/saved_data --lr 0.005 --epoches 2 --loss_weight 0
 ```
+## Basic salUN
+##Instance-wise
+```python
+$ python mu_main.py --method salUN --mode random --saved_data_path mu/saved_data --lr 0.0013 --epoches 2 
 
+```
 ## Basic bad-teaching
 ##Instance-wise
 ```python
