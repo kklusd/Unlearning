@@ -3,7 +3,6 @@ import time
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pruner
 import torch
 import salUN.utils as utils
 #from salUN.pruner import extract_mask, prune_model_custom, remove_prune

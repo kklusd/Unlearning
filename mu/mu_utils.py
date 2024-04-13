@@ -134,10 +134,10 @@ def Evaluation(model_dic,retain_train,retain_val,forget_train,forget_val,opt,dev
         print(m1)
 
 
-if opt.method == 'salUN':
-        model = model_dic['raw_model']
-        m1 = MIA(rt=retain_train, rv=retain_val, test=forget_train, model=model,method = opt.method)
-        print(m1)
+    if opt.method == 'salUN':
+            model = model_dic['raw_model']
+            m1 = MIA(rt=retain_train, rv=retain_val, test=forget_train, model=model,method = opt.method)
+            print(m1)
 
 def contrast_loss(features, set_labels, batch_size, device, n_views, temperature):
     criterion = torch.nn.CrossEntropyLoss().to(device)
