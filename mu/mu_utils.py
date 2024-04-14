@@ -92,19 +92,19 @@ def Evaluation(model_dic,retain_train,retain_val,forget_train,forget_val,opt,dev
         Eva_Df_before = evaluate(raw_model, forget_train_dl,device)
         print(Eva_Df_before)
         print('After unlearning epoch {} forget'.format(opt.epoches))
-        Eva_Dt_after = evaluate(retrain_model, forget_val_dl,device)
+        Eva_Dt_after = evaluate(retrain_model, retain_val_dl,device)
         print(Eva_Dt_after)
         Eva_Dr_after = evaluate(retrain_model, retain_train_dl,device)
         Eva_Df_after = evaluate(retrain_model, forget_train_dl,device)
 
         print('AccDr:{}'.format(Eva_Dr_after['Acc']))
-        print('AccDf:{}'.format(100-Eva_Df_after['Acc']))
+        print('AccDf:{}'.format(Eva_Df_after['Acc']))
         print('AccDt:{}'.format(Eva_Dt_after['Acc']))
         print(Eva_Df_before['Acc'],Eva_Df_after['Acc'] , Eva_Dr_after['Acc'] ,Eva_Dr_before['Acc'])
         print('Geo_metric:{}'.format((Eva_Df_before['Acc']-Eva_Df_after['Acc'])*(Eva_Dr_after['Acc']-Eva_Dr_before['Acc'])))
         m1 = MIA(rt=retain_train, rv=retain_val, test=forget_train, model=retrain_model,method = opt.method)
         print(m1)
-        data = {'AccDr:{}':Eva_Dr_after['Acc'],'AccDf:{}':100-Eva_Df_after['Acc'],'AccDt:{}':Eva_Dt_after['Acc'],"MIA":m1}
+        data = {'AccDr:{}':Eva_Dr_after['Acc'],'AccDf:{}':Eva_Df_after['Acc'],'AccDt:{}':Eva_Dt_after['Acc'],"MIA":m1}
         np.save('mu/saved_data/retrain_5000.npy', data)
 
     if opt.method == 'scrub':
