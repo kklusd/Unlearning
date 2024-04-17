@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from mu.bad_teaching import set_dataset, set_loader, bad_teaching, bad_te_model_loader
-from mu.mu_utils import Evaluation
+from mu.mu_utils import Evaluation, feature_visialization
 import mu.arg_parser as parser
 from mu.Scrub import scrub, scrub_model_loader
 from mu.mu_salUN import set_salUN_loader, salUN_model_loader,salUN_process
@@ -56,6 +56,7 @@ def main():
 
         # ----------------------------Eva--------------------------------
         Evaluation(model_dic,retain_train, retain_val,forget_set['train'], forget_val,opt,device)
+        feature_visialization(model_dict=model_dic, ul_loader=unlearn_dl, ul_method="bad_teaching", device=device)
     elif method == 'neggrad':
         model_dic = basic_model_loader(opt, device)
         # ------------------------------dataloader--------------------------------------------------
@@ -67,6 +68,7 @@ def main():
         # print(forget_train==forget_set['train'],len(forget_train))
         # ----------------------------Eva--------------------------------
         Evaluation(model_dic, retain_train, retain_val, forget_set['train'], forget_val, opt, device)
+        feature_visialization(model_dict=model_dic, ul_loader=unlearn_dl, ul_method="neggrad", device=device)
     elif method == "retrain":
         assert opt.saved_data_path != '', "Must retrain from saved data!!"
         retrain = False
@@ -81,8 +83,10 @@ def main():
         else:
             retrain_model_path = 'SimCLR/runs/retrain_model/checkpoint_0300.pth.tar'
             raw_model_path = 'SimCLR/runs/original_model/checkpoint_0300.pth.tar'
+            unlearn_dl = set_loader(retain_train, forget_train, opt)
             model_dic = model_loader(opt, device, raw_model_path, retrain_model_path)
         Evaluation(model_dic, retain_train, retain_val, forget_set['train'], forget_val, opt, device)
+        feature_visialization(model_dict=model_dic, ul_loader=unlearn_dl, ul_method="retrain", device=device)
     elif method == 'scrub':
         model_dic = scrub_model_loader(opt, device)
         unlearn_dl = set_loader(retain_train, forget_train, opt)
@@ -90,13 +94,14 @@ def main():
             epoch = i+1
             scrub(model_dic=model_dic, unlearing_loader=unlearn_dl, epoch=epoch, device=device, opt=opt)
         Evaluation(model_dic,retain_train, retain_val,forget_set['train'], forget_val,opt,device)
-
+        feature_visialization(model_dict=model_dic, ul_loader=unlearn_dl, ul_method="scrub", device=device)
     elif method == 'salUN':
         unlearn_dl = set_salUN_loader(forget_set, retain_set, opt)
         model_dic = salUN_model_loader(opt, device)
         model = model_dic['raw_model']
         salUN_process(unlearn_data_loader = unlearn_dl,model = model,opt = opt,forget_set=forget_set, retain_set=retain_set)
         Evaluation(model_dic,retain_train, retain_val,forget_set['train'], forget_val,opt,device)
+        feature_visialization(model_dict=model_dic, ul_loader=unlearn_dl, ul_method="salUN", device=device)
 
     time2 = time.time()
     print('Total time:',time2-time1)

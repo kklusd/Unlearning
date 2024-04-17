@@ -3,6 +3,8 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader
 from .mu_metrics import MIA
 import numpy as np
+
+
 def accuracy(outputs, labels):
     _, preds = torch.max(outputs, dim=1)
     return torch.tensor(torch.sum(preds==labels).item() / len(preds)) * 100  #100
@@ -55,11 +57,11 @@ def Evaluation(model_dic,retain_train,retain_val,forget_train,forget_val,opt,dev
         print('Before unlearning forget')
         print(Eva_Df_before)
         print('After unlearning epoch {} forget'.format(opt.epoches))
-        print(Eva_Dt_after)
+        print(Eva_Df_after)
         print('AccDr:{}'.format(Eva_Dr_after['Acc']))
         print('AccDf:{}'.format(Eva_Df_after['Acc']))
         print('AccDt:{}'.format(Eva_Dt_after['Acc']))
-        print(Eva_Df_before['Acc'], Eva_Df_after['Acc'], Eva_Dr_after['Acc'], Eva_Dr_before['Acc'])
+        print(Eva_Df_before['Acc'], Eva_Df_after['Acc'], Eva_Dr_before['Acc'], Eva_Dr_after['Acc'])
         print('Geo_metric:{}'.format(abs((Eva_Df_after['Acc'] - 95.77) * abs(Eva_Dt_after['Acc'] - 95.77))))
         print(m1)
 
@@ -80,7 +82,7 @@ def Evaluation(model_dic,retain_train,retain_val,forget_train,forget_val,opt,dev
         print('AccDr:{}'.format(Eva_Dr_after['Acc']))
         print('AccDf:{}'.format(Eva_Df_after['Acc']))
         print('AccDt:{}'.format(Eva_Dt_after['Acc']))
-        print(Eva_Df_before['Acc'],Eva_Df_after['Acc'] , Eva_Dr_after['Acc'] ,Eva_Dr_before['Acc'])
+        print(Eva_Df_before['Acc'], Eva_Df_after['Acc'],Eva_Dr_before['Acc'],Eva_Dr_after['Acc'])
         print('Geo_metric:{}'.format((Eva_Df_after['Acc']-90)*(Eva_Dt_after['Acc']-80)))
         print(m1)
 
@@ -100,7 +102,7 @@ def Evaluation(model_dic,retain_train,retain_val,forget_train,forget_val,opt,dev
         print('AccDr:{}'.format(Eva_Dr_after['Acc']))
         print('AccDf:{}'.format(Eva_Df_after['Acc']))
         print('AccDt:{}'.format(Eva_Dt_after['Acc']))
-        print(Eva_Df_before['Acc'],Eva_Df_after['Acc'] , Eva_Dr_after['Acc'] ,Eva_Dr_before['Acc'])
+        print(Eva_Df_before['Acc'],Eva_Df_after['Acc'] , Eva_Dr_before['Acc'], Eva_Dr_after['Acc'])
         print('Geo_metric:{}'.format((Eva_Df_before['Acc']-Eva_Df_after['Acc'])*(Eva_Dr_after['Acc']-Eva_Dr_before['Acc'])))
         m1 = MIA(rt=retain_train, rv=retain_val, test=forget_train, model=retrain_model,method = opt.method)
         print(m1)
@@ -129,7 +131,7 @@ def Evaluation(model_dic,retain_train,retain_val,forget_train,forget_val,opt,dev
         print('AccDr:{}'.format(Eva_Dr_after['Acc']))
         print('AccDf:{}'.format(Eva_Df_after['Acc']))
         print('AccDt:{}'.format(Eva_Dt_after['Acc']))
-        print(Eva_Df_before['Acc'], Eva_Df_after['Acc'], Eva_Dr_after['Acc'], Eva_Dr_before['Acc'])
+        print(Eva_Df_before['Acc'], Eva_Df_after['Acc'], Eva_Dr_before['Acc'], Eva_Dr_after['Acc'])
         print('Geo_metric:{}'.format(abs((Eva_Df_after['Acc'] - 95.77) * abs(Eva_Dt_after['Acc'] - 95.77))))
         print(m1)
 
@@ -180,3 +182,82 @@ def simple_contrast_loss(student_sim_features, sim_features, set_labels):
     sim_loss = (1 - adj_weight) * torch.mean(set_labels * similarity) + adj_weight * torch.mean((set_labels - 1) * similarity)
 
     return sim_loss
+
+
+def feature_visialization(model_dict, ul_loader, ul_method, device, visial_unlearn=True):
+    def t_sne_visial(retain_features,forget_features, save_name):
+        from sklearn.manifold import TSNE
+        import matplotlib.pyplot as plt
+        retain_fea_len = retain_features.shape[0]
+        forget_fea_len = forget_features.shape[0]
+        features = np.concatenate([retain_features,forget_features], axis=0)
+        tsne_result = TSNE(n_components=2).fit_transform(features)
+        def scale_to_01_range(x):
+            value_range = (np.max(x) - np.min(x))
+            starts_from_zero = x - np.min(x)
+            return starts_from_zero / value_range
+        tsne_x = scale_to_01_range(tsne_result[:,0])
+        tsne_y = scale_to_01_range(tsne_result[:,1])
+        colors = ['b', 'c']
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.scatter(tsne_x[0:retain_fea_len], tsne_y[0:retain_fea_len], c=colors[0], label='retain',s=4)
+        ax.scatter(tsne_x[retain_fea_len:retain_fea_len+forget_fea_len], tsne_y[retain_fea_len:retain_fea_len+forget_fea_len], c=colors[1], label='forget',s=2)
+        ax.legend(loc='best')
+        plt.savefig(save_name)
+    
+    if visial_unlearn:
+        from .mu_models import BasicResnet
+        import copy
+        from tqdm import tqdm
+        def get_feature_extractor(model):
+            extractor = BasicResnet(base_model="resnet18", out_dim=10)
+            model_state_dict = model.state_dict()
+            extractor_state_dict = extractor.state_dict()
+            for i in range(len(extractor_state_dict.keys())):
+                key_1 = list(extractor_state_dict.keys())[i]
+                key_2 = list(model_state_dict.keys())[i]
+                extractor_state_dict[key_1] = copy.deepcopy(model_state_dict[key_2])
+            extractor.load_state_dict(extractor_state_dict)
+            extractor.to(device)
+            return extractor
+        if ul_method == "bad_teaching" or ul_method == "scrub":
+            ul_model = model_dict["student"]
+            ul_model = get_feature_extractor(ul_model)
+        elif ul_method == "retrain":
+            ul_model = model_dict["retrain_model"]
+        else:
+            ul_model = model_dict["raw_model"]
+        with torch.no_grad():
+            ul_model.eval()
+            forget_features = []
+            retain_features = []
+            for batch in tqdm(ul_loader, desc='generating features',leave=False):
+                x, y = batch
+                x = x.to(device)
+                output = ul_model(x)
+                if len(output) == 2:
+                    features = output[1].detach().cpu()
+                else:
+                    features = output.detach().cpu()
+                for i in range(y.shape[0]):
+                    if y[i] == 1:
+                        forget_features.append(features[i])
+                    else:
+                        retain_features.append(features[i])
+            forget_features = torch.stack(forget_features, dim=0).squeeze(-1).squeeze(-1).numpy()
+            retain_features = torch.stack(retain_features, dim=0).squeeze(-1).squeeze(-1).numpy()
+        t_sne_visial(retain_features, forget_features, save_name="unlearning_tsne.png")
+                
+    else:
+        forget_feature_path = "OpenGAN/saved_features/forget_features.pt"
+        retain_feature_path = "OpenGAN/saved_features/retain_features.pt"
+        with open(forget_feature_path, 'rb') as f:
+            forget_features = torch.load(f)
+            f.close()
+        with open(retain_feature_path, 'rb') as f:
+            retain_features = torch.load(f)
+            f.close()
+        forget_features = forget_features.squeeze(-1).squeeze(-1).numpy()
+        retain_features = retain_features.squeeze(-1).squeeze(-1).numpy()
+        t_sne_visial(retain_features, forget_features, save_name="original_tsne.png")
