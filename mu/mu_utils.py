@@ -184,13 +184,19 @@ def simple_contrast_loss(student_sim_features, sim_features, set_labels):
     return sim_loss
 
 
-def feature_visialization(model_dict, ul_loader, ul_method, device, visial_unlearn=True):
-    def t_sne_visial(retain_features,forget_features, save_name):
+def feature_visialization(model_dict, retain_data, forget_data, ul_method, device, visial_unlearn=True):
+    retain_train_dl = DataLoader(retain_data, 128, 4, pin_memory=True)
+    forget_train_dl = DataLoader(forget_data, 128, 4, pin_memory=True)
+    from tqdm import tqdm
+    def t_sne_visial(retain_features, forget_features, save_name):
         from sklearn.manifold import TSNE
         import matplotlib.pyplot as plt
-        retain_fea_len = retain_features.shape[0]
-        forget_fea_len = forget_features.shape[0]
-        features = np.concatenate([retain_features,forget_features], axis=0)
+        all_feature_ls = []
+        for label in retain_features:
+            all_feature_ls.append(retain_features[label])
+        for label in forget_features:
+            all_feature_ls.append(forget_features[label])
+        features = np.concatenate(all_feature_ls, axis=0)
         tsne_result = TSNE(n_components=2).fit_transform(features)
         def scale_to_01_range(x):
             value_range = (np.max(x) - np.min(x))
@@ -198,18 +204,31 @@ def feature_visialization(model_dict, ul_loader, ul_method, device, visial_unlea
             return starts_from_zero / value_range
         tsne_x = scale_to_01_range(tsne_result[:,0])
         tsne_y = scale_to_01_range(tsne_result[:,1])
-        colors = ['b', 'c']
-        fig = plt.figure()
+        del(features)
+        colors = {"0":'#e50000', "1":'#653700', "2":'#7e1e9c', "3":'#15b01a', "4":'#00035b', "5":'#033500', "6":'#f97306', "7":'#13eac9', "8":'#029386', "9":'#06c2ac'}
+        fig = plt.figure(figsize=(10, 10))
         ax = fig.add_subplot(111)
-        ax.scatter(tsne_x[0:retain_fea_len], tsne_y[0:retain_fea_len], c=colors[0], label='retain',s=4)
-        ax.scatter(tsne_x[retain_fea_len:retain_fea_len+forget_fea_len], tsne_y[retain_fea_len:retain_fea_len+forget_fea_len], c=colors[1], label='forget',s=2)
-        ax.legend(loc='best')
-        plt.savefig(save_name)
+        for label in retain_features:
+            feature_num = int(retain_features[label].shape[0])
+            feature_indexes = np.arange(0, feature_num)
+            current_x  = tsne_x[feature_indexes]
+            tsne_x = np.delete(tsne_x, feature_indexes, axis=0)
+            current_y = tsne_y[0:feature_num]
+            tsne_y = np.delete(tsne_y, feature_indexes, axis=0)
+            ax.scatter(current_x, current_y, c=colors[label], label=label, s=0.01)
+        for label in forget_features:
+            feature_num = int(forget_features[label].shape[0])
+            feature_indexes = np.arange(0, feature_num)
+            current_x  = tsne_x[feature_indexes]
+            tsne_x = np.delete(tsne_x, feature_indexes, axis=0)
+            current_y = tsne_y[0:feature_num]
+            tsne_y = np.delete(tsne_y, feature_indexes, axis=0)
+            ax.scatter(current_x, current_y, c=colors[label], label=label, marker="D", s=4)
+        plt.savefig(save_name, dpi=100)
     
     if visial_unlearn:
         from .mu_models import BasicResnet
         import copy
-        from tqdm import tqdm
         def get_feature_extractor(model):
             extractor = BasicResnet(base_model="resnet18", out_dim=10)
             model_state_dict = model.state_dict()
@@ -230,9 +249,9 @@ def feature_visialization(model_dict, ul_loader, ul_method, device, visial_unlea
             ul_model = model_dict["raw_model"]
         with torch.no_grad():
             ul_model.eval()
-            forget_features = []
-            retain_features = []
-            for batch in tqdm(ul_loader, desc='generating features',leave=False):
+            forget_features = {}
+            retain_features = {}
+            for batch in tqdm(retain_train_dl, desc='generating features',leave=False):
                 x, y = batch
                 x = x.to(device)
                 output = ul_model(x)
@@ -241,23 +260,72 @@ def feature_visialization(model_dict, ul_loader, ul_method, device, visial_unlea
                 else:
                     features = output.detach().cpu()
                 for i in range(y.shape[0]):
-                    if y[i] == 1:
-                        forget_features.append(features[i])
+                    label = str(y[i].item())
+                    if label in retain_features:
+                        retain_features[label].append(features[i])
                     else:
-                        retain_features.append(features[i])
-            forget_features = torch.stack(forget_features, dim=0).squeeze(-1).squeeze(-1).numpy()
-            retain_features = torch.stack(retain_features, dim=0).squeeze(-1).squeeze(-1).numpy()
+                        retain_features[label] = [features[i]]
+            for batch in tqdm(forget_train_dl, desc='generating features',leave=False):
+                x, y = batch
+                x = x.to(device)
+                output = ul_model(x)
+                if len(output) == 2:
+                    features = output[1].detach().cpu()
+                else:
+                    features = output.detach().cpu()
+                for i in range(y.shape[0]):
+                    label = str(y[i].item())
+                    if label in forget_features:
+                        forget_features[label].append(features[i])
+                    else:
+                        forget_features[label] = [features[i]]
+            for label in forget_features:
+                forget_features[label] = torch.stack(forget_features[label], dim=0).squeeze(-1).squeeze(-1).numpy()
+            for label in retain_features:
+                retain_features[label] = torch.stack(retain_features[label], dim=0).squeeze(-1).squeeze(-1).numpy()
         t_sne_visial(retain_features, forget_features, save_name="unlearning_tsne.png")
                 
     else:
-        forget_feature_path = "OpenGAN/saved_features/forget_features.pt"
-        retain_feature_path = "OpenGAN/saved_features/retain_features.pt"
-        with open(forget_feature_path, 'rb') as f:
-            forget_features = torch.load(f)
-            f.close()
-        with open(retain_feature_path, 'rb') as f:
-            retain_features = torch.load(f)
-            f.close()
-        forget_features = forget_features.squeeze(-1).squeeze(-1).numpy()
-        retain_features = retain_features.squeeze(-1).squeeze(-1).numpy()
+        from SimCLR.models.resnet_classifier import ResNetClassifier
+        original_model = ResNetClassifier(base_model="resnet18", num_class=10, weights=None)
+        check_point_path = "SimCLR/runs/original_model/checkpoint_0300.pth.tar"
+        check_point = torch.load(check_point_path, map_location=device)
+        original_model.load_state_dict(check_point['state_dict'])
+        original_model.to(device)
+        with torch.no_grad():
+            original_model.eval()
+            forget_features = {}
+            retain_features = {}
+            for batch in tqdm(retain_train_dl, desc='generating features',leave=False):
+                x, y = batch
+                x = x.to(device)
+                output = original_model(x)
+                if len(output) == 2:
+                    features = output[1].detach().cpu()
+                else:
+                    features = output.detach().cpu()
+                for i in range(y.shape[0]):
+                    label = str(y[i].item())
+                    if label in retain_features:
+                        retain_features[label].append(features[i])
+                    else:
+                        retain_features[label] = [features[i]]
+            for batch in tqdm(forget_train_dl, desc='generating features',leave=False):
+                x, y = batch
+                x = x.to(device)
+                output = original_model(x)
+                if len(output) == 2:
+                    features = output[1].detach().cpu()
+                else:
+                    features = output.detach().cpu()
+                for i in range(y.shape[0]):
+                    label = str(y[i].item())
+                    if label in forget_features:
+                        forget_features[label].append(features[i])
+                    else:
+                        forget_features[label] = [features[i]]
+            for label in forget_features:
+                forget_features[label] = torch.stack(forget_features[label], dim=0).squeeze(-1).squeeze(-1).numpy()
+            for label in retain_features:
+                retain_features[label] = torch.stack(retain_features[label], dim=0).squeeze(-1).squeeze(-1).numpy()
         t_sne_visial(retain_features, forget_features, save_name="original_tsne.png")

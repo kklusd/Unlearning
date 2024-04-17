@@ -27,7 +27,7 @@ parser.add_argument('--data_path', type=str, default='',
                     help='saved dataset for instance_wise unlearning')
 parser.add_argument('--forget_num', type=int, default=5000, help='number of forget data')
 parser.add_argument('--base_model', type=str, default='resnet18', help='base model for feature generator')
-parser.add_argument('--state_dict_path', type=str, default='./SimCLR/runs/original_model/checkpoint_0150.pth.tar',
+parser.add_argument('--state_dict_path', type=str, default='./SimCLR/runs/original_model/checkpoint_0300.pth.tar',
                     help='feature generator model checkpoint path')
 parser.add_argument('--save_dir', type=str, default='OpenGAN/OpenGAN_runs', help='Dirictory of model save')
 
@@ -54,7 +54,7 @@ def get_features(args, device):
                 retain_set = pickle.load(f)
                 f.close()
             forget_data = forget_set['train']
-            retain_data = retain_set['val']
+            retain_data = retain_set['train']
         else:
             forget_data_file = os.path.join('mu/saved_data', 'forget_data.pt')
             retain_data_file = os.path.join('mu/saved_data', 'retain_data.pt')
@@ -72,7 +72,7 @@ def get_features(args, device):
                 pickle.dump(retain_indexes, f)
                 f.close()
             forget_data = forget_set['train']
-            retain_data = retain_set['val']
+            retain_data = retain_set['train']
         new_feat_generator = FeaturesGenerator(base_model=args.base_model, out_dim=128, 
                                              state_dict_path=args.state_dict_path, device=device)
         forget_features, retain_features = new_feat_generator.generate(forget_data, retain_data, 
@@ -81,14 +81,14 @@ def get_features(args, device):
 
 def main():
     args = parser.parse_args()
-    device = torch.device('cuda:7') if torch.cuda.is_available() else torch.device('cpu')
+    device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
     criterion = nn.BCELoss()
     forget_features, retain_features = get_features(args, device)
     feature_set = FeaturesSet(forget_features=forget_features, retain_features=retain_features[0:0])
     feature_loader = DataLoader(feature_set, batch_size=args.batch_size, shuffle=True, 
                                    num_workers=2, pin_memory=True)
     netG, netD = model_init(args, device)
-    optimizer_D = torch.optim.Adam(netD.parameters(), lr=args.lr/1.5, betas=(0.5, 0.999))
+    optimizer_D = torch.optim.Adam(netD.parameters(), lr=args.lr/2, betas=(0.5, 0.999))
     optimizer_G = torch.optim.Adam(netG.parameters(), lr=args.lr, betas=(0.5, 0.999))
     for epoch in range(args.epoches):
         iter = 0
@@ -99,10 +99,10 @@ def main():
             y = y.to(torch.float32).to(device)
             forget_num = torch.count_nonzero(y)
             retain_num = y.shape[0] - forget_num
-            netD.zero_grad()
             batch_size =features.shape[0]
             out_put = netD(features).view(-1)
             D_x_close = ((y * out_put).sum() / forget_num).item()
+            optimizer_D.zero_grad()
             err_D_real = criterion(out_put, y)
             err_D_real.backward()
             noise = torch.randn(batch_size, args.noise_size, 1, 1).to(device)
@@ -114,7 +114,7 @@ def main():
             err_D_fake.backward()
             err_D = err_D_real + err_D_fake
             optimizer_D.step()
-            netG.zero_grad()
+            optimizer_G.zero_grad()
             label = label.fill_(1.0)
             out_put = netD(fake).view(-1)
             D_G_z2 = out_put.mean().item()
