@@ -165,7 +165,7 @@ def contrast_loss(features, set_labels, batch_size, device, n_views, temperature
     set_labels = set_labels.repeat(n_views)
     set_labels = set_labels.view(set_labels.shape[0], 1)
     # print("set_labels", set_labels.shape)
-    positives = -set_labels * positives
+    positives = (1-set_labels) * positives - set_labels * positives
     logits = torch.cat([positives, negatives], dim=1)
     # logits = -set_labels * logits
     labels = torch.zeros(logits.shape[0], dtype=torch.long).to(device)
@@ -224,6 +224,7 @@ def feature_visialization(model_dict, retain_data, forget_data, ul_method, devic
             current_y = tsne_y[0:feature_num]
             tsne_y = np.delete(tsne_y, feature_indexes, axis=0)
             ax.scatter(current_x, current_y, c=colors[label], label=label, marker="D", s=4)
+        plt.axis('off')
         plt.savefig(save_name, dpi=100)
     
     if visial_unlearn:
@@ -283,7 +284,7 @@ def feature_visialization(model_dict, retain_data, forget_data, ul_method, devic
                 forget_features[label] = torch.stack(forget_features[label], dim=0).squeeze(-1).squeeze(-1).numpy()
             for label in retain_features:
                 retain_features[label] = torch.stack(retain_features[label], dim=0).squeeze(-1).squeeze(-1).numpy()
-        t_sne_visial(retain_features, forget_features, save_name="unlearning_tsne.png")
+        t_sne_visial(retain_features, forget_features, save_name="unlearning_tsne.pdf")
                 
     else:
         from SimCLR.models.resnet_classifier import ResNetClassifier
@@ -328,4 +329,4 @@ def feature_visialization(model_dict, retain_data, forget_data, ul_method, devic
                 forget_features[label] = torch.stack(forget_features[label], dim=0).squeeze(-1).squeeze(-1).numpy()
             for label in retain_features:
                 retain_features[label] = torch.stack(retain_features[label], dim=0).squeeze(-1).squeeze(-1).numpy()
-        t_sne_visial(retain_features, forget_features, save_name="original_tsne.png")
+        t_sne_visial(retain_features, forget_features, save_name="original_tsne.pdf")
