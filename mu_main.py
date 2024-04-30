@@ -1,5 +1,7 @@
 import numpy as np
 import torch
+from tqdm import tqdm
+
 from mu.bad_teaching import set_dataset, set_loader, bad_teaching, bad_te_model_loader
 from mu.mu_utils import Evaluation, feature_visialization
 import mu.arg_parser as parser
@@ -13,6 +15,8 @@ from mu.mu_data import alpr_aug, simple_aug
 import copy
 import time
 import salUN.unlearn
+from metriccc.torch_cka import CKA
+from metriccc.confusion_draw import ConfusionMatrix
 def main():
     time1 = time.time()
     opt = parser.parse_option()
@@ -78,7 +82,7 @@ def main():
             retain_indexes = list(range(0, 50000))
             train_loader = set_retrain_loader(opt.data_root, retain_indexes, params, mode="train")
             val_loader = set_retrain_loader(opt.data_root, retain_indexes, params, mode="val")
-            retrain_model = retrain(params, train_loader, val_loader)
+            retrain_model = Retrain(params, train_loader, val_loader)
             model_dic = {'raw_model': retrain_model}
         else:
             retrain_model_path = 'SimCLR/runs/retrain_model/checkpoint_0300.pth.tar'
@@ -94,7 +98,7 @@ def main():
             epoch = i+1
             scrub(model_dic=model_dic, unlearing_loader=unlearn_dl, epoch=epoch, device=device, opt=opt)
         Evaluation(model_dic,retain_train, retain_val,forget_set['train'], forget_val,opt,device)
-        feature_visialization(model_dict=model_dic, retain_data=retain_train, forget_data=forget_set['train'], ul_method="scrub", device=device)
+        #feature_visialization(model_dict=model_dic, retain_data=retain_train, forget_data=forget_set['train'], ul_method="scrub", device=device)
     elif method == 'salUN':
         unlearn_dl = set_salUN_loader(forget_set, retain_set, opt)
         model_dic = salUN_model_loader(opt, device)
@@ -105,6 +109,46 @@ def main():
 
     time2 = time.time()
     print('Total time:',time2-time1)
+    draw = True
+    if draw == True:
+        if method == 'bad_teaching' or method =='scrub':
+            net = model_dic['student']
+        else:
+            net = model_dic['raw_model']
+    model2 = model_dic['compete_teacher']
+    datasett = torch.utils.data.Subset(forget_train, range(1000))
+    g = torch.Generator()
+    g.manual_seed(0)
+    dataloader = DataLoader(datasett,
+                            batch_size=64,
+                            shuffle=False,
+                            generator=g)
+    cka = CKA(net, model2,
+              model1_name="unlearn model", model2_name="Original",
+              device='cuda')
+
+    cka.compare(dataloader)
+
+    cka.plot_results(save_path="metriccc/assets/resnet-resnet_compare.png")
+
+   # #     类别
+   #      classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+   #      labels = [label for label in classes]
+   #      confusion = ConfusionMatrix(num_classes=10, labels=labels)
+   #
+   #      val_loader = DataLoader(retain_val, batch_size=opt.batch_size, shuffle=True,
+   #                                 num_workers=opt.num_worker, pin_memory=True)
+   #      net.eval()
+   #      with torch.no_grad():
+   #          for val_data in tqdm(val_loader):
+   #              val_images, val_labels = val_data
+   #              outputs,_ = net(val_images.to(device))
+   #              outputs = torch.softmax(outputs, dim=1)
+   #              outputs = torch.argmax(outputs, dim=1)
+   #              confusion.update(outputs.to("cpu").numpy(), val_labels.to("cpu").numpy())  # 更新混淆矩阵的值
+   #      confusion.plot()  # 绘制混淆矩阵
+   #      confusion.summary()  # 计算指标
+   #      confusion.savefig('cmbt.pdf', dpi=60)
 
 if __name__ == '__main__':
     main()
